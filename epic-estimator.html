@@ -574,7 +574,7 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
   <div id="screen-start" class="screen active">
     <div class="hero-title">Оценка эпика<br>в <em>story points</em></div>
     <p class="hero-sub">
-      Инструмент даст оценку Эпика на основе 7 критериев по алгоритму Фибоначчи. 
+      Инструмент даст оценку Эпика на основе 7 критериев по алгоритму Фибоначчи.
       Точность 95%.
       Нам доверяют во всей Korona.Tex
     </p>
@@ -586,6 +586,13 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
       <div class="mode-desc" id="mode-desc-standard">Детальная оценка — AI последовательно задаёт вопросы по каждому из 7 критериев.</div>
       <div class="mode-desc express" id="mode-desc-express" style="display:none">Быстрая оценка — опишите эпик одним сообщением, AI сразу оценит по всем критериям. При необходимости задаст уточняющие вопросы одним сообщением.</div>
     </div>
+
+    <div class="form-group" id="epic-input-wrap" style="display:none">
+      <label class="form-label" for="epic-input">Описание эпика <span>*</span></label>
+      <textarea id="epic-input" placeholder="Опишите эпик: что планируется сделать, какие компоненты затрагиваются, нужные интеграции, бизнес-логика, возможные риски..."></textarea>
+    </div>
+
+    <div id="error-start" style="display:none"></div>
 
     <button class="btn btn-primary" onclick="startSession()" id="start-btn">
       Начать оценку →
@@ -1148,12 +1155,9 @@ function setMode(mode) {
   document.getElementById('mode-btn-express').classList.toggle('active',  S.expressMode);
   document.getElementById('mode-desc-standard').style.display = S.expressMode ? 'none' : '';
   document.getElementById('mode-desc-express').style.display  = S.expressMode ? '' : 'none';
+  document.getElementById('epic-input-wrap').style.display = S.expressMode ? '' : 'none';
   document.getElementById('start-btn').textContent = S.expressMode
     ? 'Запустить экспресс-оценку →' : 'Начать оценку →';
-  const ta = document.getElementById('epic-input');
-  ta.placeholder = S.expressMode
-    ? 'Опишите эпик: что планируется сделать, какие компоненты затрагиваются, нужные интеграции, бизнес-логика, возможные риски...'
-    : 'Краткое название или описание эпика (опционально)';
 }
 
 async function startSession() {
