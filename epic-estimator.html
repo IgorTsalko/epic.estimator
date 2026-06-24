@@ -364,12 +364,13 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
   display: flex; flex-direction: column; gap: 6px;
 }
 .crit-row {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 0;
   padding: 10px 14px; background: var(--surface);
   border: 1.5px solid var(--border); border-radius: var(--r);
-  transition: border-color var(--tr);
+  transition: border-color var(--tr); cursor: pointer;
 }
 .crit-row:hover { border-color: var(--ink); }
+.crit-row-main { display: flex; align-items: center; gap: 12px; width: 100%; }
 .crit-type {
   font-size: 10px; font-family: var(--font-head); font-weight: 600;
   letter-spacing: 0.06em; text-transform: uppercase;
@@ -387,6 +388,18 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
 .crit-bar-wrap { width: 80px; }
 .crit-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
 .crit-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.5s ease; }
+
+.crit-chevron {
+  margin-left: auto; font-size: 10px; color: var(--ink2);
+  transition: transform 0.2s ease; flex-shrink: 0;
+}
+.crit-row.open .crit-chevron { transform: rotate(180deg); }
+.crit-reason {
+  display: none; width: 100%; padding: 10px 0 2px;
+  font-size: 13px; color: var(--ink2); line-height: 1.6;
+  border-top: 1px solid var(--border); margin-top: 8px;
+}
+.crit-row.open .crit-reason { display: block; }
 
 .result-footer { padding-top: 8px; }
 
@@ -903,7 +916,9 @@ const EXPRESS_SYSTEM = `Ты — инструмент экспресс-оцен�
 Шкала Фибоначчи: 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377
 
 Когда готов выносить итоговую оценку — заверши сообщение строго этой меткой:
-[EXPRESS_DONE:{"scores":[{"name":"Тип изменений","type":"base","sp":N},{"name":"Компонентный состав","type":"base","sp":N},{"name":"Интеграции","type":"base","sp":N},{"name":"Бизнес-логика","type":"base","sp":N},{"name":"Риски и последствия ошибок","type":"extra","sp":N},{"name":"Коммуникации","type":"extra","sp":N},{"name":"Тестирование","type":"extra","sp":N}],"finalSP":N,"explanation":"..."}]
+[EXPRESS_DONE:{"scores":[{"name":"Тип изменений","type":"base","sp":N,"reason":"..."},{"name":"Компонентный состав","type":"base","sp":N,"reason":"..."},{"name":"Интеграции","type":"base","sp":N,"reason":"..."},{"name":"Бизнес-логика","type":"base","sp":N,"reason":"..."},{"name":"Риски и последствия ошибок","type":"extra","sp":N,"reason":"..."},{"name":"Коммуникации","type":"extra","sp":N,"reason":"..."},{"name":"Тестирование","type":"extra","sp":N,"reason":"..."}],"finalSP":N,"explanation":"..."}]
+
+В поле "reason" для каждого критерия напиши краткое (1–2 предложения) обоснование выставленной оценки: какие факты из описания эпика привели к этому значению.
 До вынесения оценки метку не добавляй.`;
 
 const FINAL_SYSTEM = `Ты должен оценить Эпик в стори поинтах. Эпик был предварительно оценен по каждому из 7-ми критериев. Руководствуясь правилами, дай финальную оценку эпику.
@@ -1417,7 +1432,9 @@ function parseDone(text) {
 function handleCriterionDone(sp) {
   if (S.awaitingAdvance) return;
   const crit = CRITERIA_PROMPTS[S.currentIdx];
-  S.scores.push({ name: crit.name, type: crit.type, sp });
+  const lastAiMsg = S.history.filter(m => m.role === 'assistant').at(-1)?.content ?? '';
+  const reason = lastAiMsg.replace(/\[DONE:\s*\d+\]/g, '').trim();
+  S.scores.push({ name: crit.name, type: crit.type, sp, reason });
   S.awaitingAdvance = true;
   showScoreBadge(sp);
   showCriterionResultCard(sp);
@@ -1506,13 +1523,21 @@ function renderCriteriaGrid() {
     const row = document.createElement('div');
     row.className = 'crit-row';
     const pct = Math.min((s.sp / Math.max(maxSP, 8)) * 100, 100);
+    const hasReason = s.reason && s.reason.trim();
     row.innerHTML = `
-      <div class="crit-type ${s.type}">${s.type === 'base' ? 'базовый' : 'доп.'}</div>
-      <div class="crit-name">${s.name}</div>
-      <div class="crit-bar-wrap">
-        <div class="crit-bar"><div class="crit-bar-fill" style="width:${pct}%"></div></div>
+      <div class="crit-row-main">
+        <div class="crit-type ${s.type}">${s.type === 'base' ? 'базовый' : 'доп.'}</div>
+        <div class="crit-name">${s.name}</div>
+        <div class="crit-bar-wrap">
+          <div class="crit-bar"><div class="crit-bar-fill" style="width:${pct}%"></div></div>
+        </div>
+        <div class="crit-sp">${s.sp}</div>
+        ${hasReason ? '<div class="crit-chevron">▼</div>' : ''}
       </div>
-      <div class="crit-sp">${s.sp}</div>`;
+      ${hasReason ? `<div class="crit-reason">${s.reason}</div>` : ''}`;
+    if (hasReason) {
+      row.addEventListener('click', () => row.classList.toggle('open'));
+    }
     grid.appendChild(row);
   });
 }
