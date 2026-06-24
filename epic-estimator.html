@@ -1208,9 +1208,7 @@ async function runExpressSession(epicText) {
 
     const done = parseExpressDone(reply);
     if (done) {
-      addMsg('ai', reply);
       S.expressPhase = 'done';
-      document.getElementById('express-phase-label').textContent = 'Готово';
       refreshInputState();
       await buildExpressResult(done);
     } else {
@@ -1240,16 +1238,14 @@ async function sendExpressAnswer(text) {
   try {
     const reply = await callClaude(S.history, EXPRESS_SYSTEM);
     S.history.push({ role: 'assistant', content: reply });
-    addMsg('ai', reply);
 
     const done = parseExpressDone(reply);
     if (done) {
       S.expressPhase = 'done';
-      document.getElementById('express-phase-label').textContent = 'Готово';
       refreshInputState();
       await buildExpressResult(done);
     } else {
-      // second pass still no scores — enable input as fallback
+      addMsg('ai', reply);
       S.expressPhase = 'clarification';
       document.getElementById('express-phase-label').textContent = 'Нужны уточнения';
       refreshInputState();
