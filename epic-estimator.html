@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Epic Estimator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700;900&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --border: #d8e1ec;
+  --ink: #142033;
+  --ink2: #5d6b82;
+  --accent: #d4522a;
+  --accent2: #4b74c8;
+  --success: #2a8c5a;
+  --warn: #b8860b;
+  --chip-bg: #f3f5f8;
+  --fib: #d4522a;
+  --font-head: 'Unbounded', sans-serif;
+  --font-body: 'Golos Text', sans-serif;
+  --r: 10px;
+  --tr: 0.18s ease;
+}
+
+html, body {
+  height: 100%; background: var(--bg);
+  color: var(--ink); font-family: var(--font-body);
+  font-size: 15px; line-height: 1.55;
+}
+
+/* GRID TEXTURE */
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.22;
+}
+
+#app {
+  position: relative; z-index: 1;
+  height: calc(100vh - 24px);
+  display: flex; flex-direction: column;
+  max-width: 740px; margin: 12px auto;
+  padding: 0 20px 0;
+}
+
+/* ── HEADER ── */
+.header {
+  padding: 28px 0 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 2px solid var(--ink);
+}
+.logo {
+  font-family: var(--font-head);
+  font-weight: 900; font-size: 20px;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink);
+}
+.logo span { color: var(--accent); }
+.header-tag {
+  font-size: 11px; color: var(--ink2);
+  font-family: var(--font-head); font-weight: 400;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+
+/* ── SCREENS ── */
+.screen { display: none; flex-direction: column; flex: 1; }
+.screen.active { display: flex; }
+
+/* ══ SCREEN 1: START ══ */
+#screen-start { justify-content: center; padding: 40px 0; gap: 32px; }
+
+.hero-title {
+  font-family: var(--font-head);
+  font-weight: 900;
+  font-size: clamp(28px, 6vw, 44px);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+.hero-title em { color: var(--accent); font-style: normal; }
+
+.hero-sub {
+  color: var(--ink2); font-size: 14px; max-width: 440px;
+  border-left: 3px solid var(--accent);
+  padding-left: 14px;
+  line-height: 1.65;
+}
+
+.form-group { display: flex; flex-direction: column; gap: 10px; }
+.form-label {
+  font-family: var(--font-head); font-weight: 600;
+  font-size: 11px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ink2);
+}
+.form-label span { color: var(--accent); }
+
+textarea#epic-input {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--r);
+  color: var(--ink); font-family: var(--font-body);
+  font-size: 14px; line-height: 1.6;
+  padding: 14px 16px; resize: none; height: 130px;
+  outline: none; width: 100%;
+  transition: border-color var(--tr);
+}
+textarea#epic-input:focus { border-color: var(--ink); }
+textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
+
+.api-row { display: flex; gap: 8px; }
+.api-input {
+  flex: 1; background: var(--surface);
+  border: 2px solid var(--border); border-radius: var(--r);
+  color: var(--ink); font-family: var(--font-body); font-size: 13px;
+  padding: 10px 14px; outline: none;
+  transition: border-color var(--tr);
+}
+.api-input:focus { border-color: var(--ink); }
+.api-input::placeholder { color: var(--ink2); opacity: 0.5; }
+
+.api-note {
+  font-size: 11px; color: var(--warn);
+  display: flex; align-items: center; gap: 5px;
+}
+
+#error-start {
+  display: none; padding: 10px 14px;
+  background: #fef2f2; border: 1px solid #fecaca;
+  border-radius: 8px; color: #dc2626; font-size: 13px;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 24px; border-radius: var(--r);
+  font-family: var(--font-head); font-weight: 700;
+  font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase;
+  cursor: pointer; border: 2px solid transparent;
+  transition: all var(--tr); white-space: nowrap;
+}
+.btn-primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn-primary:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); }
+.btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-ghost { background: transparent; color: var(--ink); border-color: var(--border); }
+.btn-ghost:hover:not(:disabled) { border-color: var(--ink); }
+.btn-ghost:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn-yes, .btn-no {
+  background: #ffffff;
+  color: var(--ink);
+  border-color: #cfd8e3;
+  box-shadow: 0 1px 0 rgba(20, 32, 51, 0.04);
+  flex: 1;
+}
+.btn-yes:hover:not(:disabled), .btn-no:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #b9c4d0;
+}
+.btn-yes:disabled, .btn-no:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ══ SCREEN 2: CHAT ══ */
+#screen-chat {
+  padding-top: 28px;
+  padding-bottom: 70px;
+  gap: 0;
+  min-height: 0;
+}
+
+.progress-wrap { flex-shrink: 0; padding-bottom: 16px; }
+.progress-top {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 10px;
+}
+.criterion-name {
+  font-family: var(--font-head); font-weight: 700;
+  font-size: 14px; color: var(--ink);
+}
+.criterion-num { font-size: 11px; color: var(--ink2); font-family: var(--font-head); }
+.progress-track {
+  height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; background: var(--ink);
+  border-radius: 2px; transition: width 0.4s ease;
+}
+
+.chat-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 14px 16px 0;
+  display: flex; flex-direction: column; gap: 10px;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+.chat-area::-webkit-scrollbar { width: 4px; }
+.chat-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.msg { display: flex; gap: 10px; animation: slideIn 0.2s ease both; }
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.msg-ai  { align-self: flex-start; max-width: 90%; }
+.msg-usr { align-self: flex-end; flex-direction: row-reverse; max-width: 75%; }
+
+.avatar {
+  width: 30px; height: 30px; border-radius: 8px;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-head); font-weight: 700; font-size: 10px;
+}
+.avatar-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+.avatar-logo-dot {
+  color: var(--accent);
+}
+.msg-ai  .avatar { background: var(--ink); color: var(--bg); }
+.msg-usr .avatar { background: var(--chip-bg); color: var(--ink2); }
+
+.bubble {
+  padding: 11px 15px; border-radius: var(--r);
+  font-size: 14px; line-height: 1.6;
+}
+.msg-ai  .bubble { background: #f6f8fb; border: 1.5px solid #d8e1ec; border-top-left-radius: 3px; }
+.msg-usr .bubble { background: var(--ink); color: var(--bg); border-top-right-radius: 3px; }
+
+/* typing */
+.typing-bubble {
+  display: flex; gap: 5px; padding: 14px 16px;
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--r); border-top-left-radius: 3px; width: fit-content;
+}
+.td { width: 7px; height: 7px; background: var(--ink2); border-radius: 50%; animation: tdot 1.1s infinite; }
+.td:nth-child(2) { animation-delay: 0.18s; }
+.td:nth-child(3) { animation-delay: 0.36s; }
+@keyframes tdot {
+  0%,60%,100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}
+
+/* score badge */
+.score-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; margin-top: 8px;
+  background: var(--chip-bg); border-radius: 20px;
+  font-family: var(--font-head); font-size: 11px; font-weight: 700;
+  color: var(--ink); border: 1.5px solid var(--border);
+}
+.score-badge .sp { color: var(--accent); font-size: 15px; }
+
+.criterion-result-card {
+  margin-top: 10px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 90%;
+}
+.criterion-result-text {
+  font-size: 13px;
+  color: var(--ink2);
+}
+.criterion-result-text strong {
+  color: var(--ink);
+  font-family: var(--font-head);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.criterion-result-card .btn {
+  align-self: flex-start;
+}
+
+/* chat footer */
+.chat-footer {
+  flex-shrink: 0; padding: 12px 0 0;
+  border-top: 2px solid var(--ink);
+  display: flex; align-items: center; gap: 10px;
+}
+.yn-row {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.free-row {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+#free-input {
+  flex: 1; background: var(--surface);
+  border: 2px solid var(--border); border-radius: var(--r);
+  min-width: 0;
+  font-family: var(--font-body); font-size: 14px; color: var(--ink);
+  padding: 10px 14px; outline: none; transition: border-color var(--tr);
+}
+#free-input:focus { border-color: var(--ink); }
+#free-input::placeholder { color: var(--ink2); opacity: 0.5; }
+#free-input:disabled { opacity: 0.4; }
+
+/* ══ SCREEN 3: RESULT ══ */
+#screen-result { padding-top: 24px; overflow-y: auto; gap: 28px; }
+
+.result-header { border-bottom: 2px solid var(--ink); padding-bottom: 20px; }
+.result-title {
+  font-family: var(--font-head); font-weight: 900;
+  font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink2); margin-bottom: 12px;
+}
+.result-sp {
+  display: flex; align-items: baseline; gap: 12px;
+}
+.result-sp-num {
+  font-family: var(--font-head); font-weight: 900;
+  font-size: clamp(52px, 12vw, 80px); line-height: 1;
+  color: var(--accent);
+}
+.result-sp-label {
+  font-family: var(--font-head); font-size: 13px;
+  font-weight: 600; color: var(--ink2);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+
+.result-explanation {
+  margin-top: 12px; font-size: 14px; color: var(--ink2); line-height: 1.65;
+  padding: 12px 16px; background: var(--chip-bg);
+  border-radius: var(--r); border-left: 3px solid var(--accent);
+}
+
+.section-title {
+  font-family: var(--font-head); font-weight: 700;
+  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink2); margin-bottom: 12px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+
+.criteria-grid {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.crit-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; background: var(--surface);
+  border: 1.5px solid var(--border); border-radius: var(--r);
+  transition: border-color var(--tr);
+}
+.crit-row:hover { border-color: var(--ink); }
+.crit-type {
+  font-size: 10px; font-family: var(--font-head); font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 4px;
+  background: var(--chip-bg); color: var(--ink2);
+  flex-shrink: 0;
+}
+.crit-type.base { background: #e8f0fe; color: var(--accent2); }
+.crit-type.extra { background: #f4f6f8; color: var(--ink2); }
+.crit-name { flex: 1; font-size: 13px; color: var(--ink); }
+.crit-sp {
+  font-family: var(--font-head); font-weight: 700; font-size: 16px;
+  color: var(--ink); min-width: 28px; text-align: right;
+}
+.crit-bar-wrap { width: 80px; }
+.crit-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.crit-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.5s ease; }
+
+.result-footer { padding-top: 8px; }
+
+/* loading overlay */
+#loading-overlay {
+  display: none; position: fixed; inset: 0; z-index: 100;
+  background: rgba(255,255,255,0.38);
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px;
+}
+#loading-overlay.show { display: flex; }
+.loading-text { display: none; }
+
+@media (max-width: 480px) {
+  .btn { padding: 10px 16px; }
+  .hero-title { font-size: 26px; }
+  .logo { font-size: 16px; }
+  .chat-footer { flex-wrap: wrap; }
+  .yn-row, .free-row { width: 100%; }
+}
+
+/* ── DEBUG TOGGLE ── */
+.debug-toggle {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; user-select: none;
+}
+.debug-toggle-label {
+  font-family: var(--font-head); font-size: 10px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink2);
+}
+.toggle-track {
+  width: 32px; height: 18px; border-radius: 9px;
+  background: var(--border); border: 1.5px solid var(--border);
+  position: relative; transition: background var(--tr), border-color var(--tr);
+  flex-shrink: 0;
+}
+.toggle-track.on { background: var(--ink); border-color: var(--ink); }
+.toggle-thumb {
+  position: absolute; top: 2px; left: 2px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #fff; transition: transform var(--tr);
+}
+.toggle-track.on .toggle-thumb { transform: translateX(14px); }
+
+/* ── DEBUG DRAWER (right) ── */
+#debug-drawer {
+  display: none;
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: 420px; max-width: 90vw;
+  background: #0e0e14;
+  border-left: 2px solid #3a3a5a;
+  box-shadow: -8px 0 32px rgba(0,0,0,0.5);
+  z-index: 9999;
+  font-family: monospace; font-size: 12px; color: #c8f0c8;
+}
+#debug-drawer.open { display: block; }
+
+#debug-drawer-header {
+  position: absolute; top: 0; left: 0; right: 0; height: 36px;
+  background: #0a0a10; border-bottom: 1px solid #2a2a3a;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 14px;
+}
+#debug-drawer-header span {
+  font-family: var(--font-head); font-size: 10px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: #7a7a9a;
+}
+#debug-drawer-header button {
+  font-family: var(--font-head); font-size: 10px; letter-spacing: 0.08em;
+  text-transform: uppercase; background: none; border: none;
+  color: #5a5a7a; cursor: pointer; padding: 4px 8px;
+}
+#debug-drawer-header button:hover { color: #c8f0c8; }
+
+#debug-log {
+  position: absolute; top: 36px; left: 0; right: 0; bottom: 0;
+  overflow-y: auto;
+  padding: 10px 12px;
+  box-sizing: border-box;
+}
+
+.debug-empty {
+  color: #3a3a5a; font-size: 12px; text-align: center;
+  padding: 40px 20px; line-height: 1.7;
+}
+.debug-entry { margin-bottom: 10px; border-radius: 5px; overflow: hidden; }
+.debug-entry-head {
+  padding: 5px 10px; font-size: 10px; letter-spacing: 0.06em;
+  text-transform: uppercase; display: flex; justify-content: space-between;
+  cursor: pointer; user-select: none;
+}
+.debug-entry-head:hover { filter: brightness(1.3); }
+.debug-entry.request  .debug-entry-head { background: #1a1a2e; color: #6a9fd8; }
+.debug-entry.response .debug-entry-head { background: #0f2a1a; color: #4ac87a; }
+.debug-entry.error    .debug-entry-head { background: #2a0f0f; color: #d84a4a; }
+.debug-entry-body { background: rgba(255,255,255,0.03); }
+.debug-section { padding: 7px 10px; border-top: 1px solid rgba(255,255,255,0.05); }
+.debug-section-label {
+  font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+  opacity: 0.4; margin-bottom: 4px;
+}
+.debug-code {
+  white-space: pre-wrap; word-break: break-word;
+  line-height: 1.5; font-size: 11px;
+}
+.debug-code.system-msg { color: #d8a84a; }
+.debug-code.user-msg   { color: #a0c8f0; }
+.debug-code.asst-msg   { color: #c8f0c8; }
+.debug-code.response   { color: #4ac87a; }
+.debug-code.error-msg  { color: #f07070; }
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="typing-bubble" style="background:white;">
+    <div class="td"></div><div class="td"></div><div class="td"></div>
+  </div>
+  <div class="loading-text">AI думает...</div>
+</div>
+
+
+<!-- DEBUG DRAWER -->
+<div id="debug-drawer">
+  <div id="debug-drawer-header">
+    <span>⬡ Debug log</span>
+    <button onclick="clearDebug()">Очистить</button>
+  </div>
+  <div id="debug-log">
+    <div class="debug-empty">Включите тоггл и начните оценку.<br>Здесь будут запросы и ответы модели.</div>
+  </div>
+</div>
+
+<div id="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">Epic<span>.</span>Estimator</div>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div class="debug-toggle" onclick="toggleDebug()">
+        <div class="debug-toggle-label">Debug</div>
+        <div class="toggle-track" id="debug-track">
+          <div class="toggle-thumb"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN 1 ══ -->
+  <div id="screen-start" class="screen active">
+    <div class="hero-title">Оценка эпика<br>в <em>story points</em></div>
+    <p class="hero-sub">
+      Инструмент даст оценку Эпика на основе 7 критериев по алгоритму Фибоначчи. 
+      Точность 95%.
+      Нам доверяют во всей Korona.Tex
+    </p>
+    <button class="btn btn-primary" onclick="startSession()" id="start-btn">
+      Начать оценку →
+    </button>
+  </div>
+
+  <!-- ══ SCREEN 2 ══ -->
+  <div id="screen-chat" class="screen">
+    <div class="progress-wrap">
+      <div class="progress-top">
+        <div class="criterion-name" id="crit-name">—</div>
+        <div class="criterion-num" id="crit-num">1 / 7</div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="prog-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="chat-area" id="chat-area"></div>
+
+    <div class="chat-footer">
+      <div class="yn-row">
+        <button class="btn btn-yes" id="btn-yes" onclick="quickAnswer('Да')" disabled>✓ Да</button>
+        <button class="btn btn-no"  id="btn-no"  onclick="quickAnswer('Нет')" disabled>✗ Нет</button>
+      </div>
+      <div class="free-row">
+        <input type="text" id="free-input" placeholder="Или напишите свой ответ..." disabled>
+        <button class="btn btn-ghost" id="btn-send" onclick="sendFree()" disabled>→</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN 3 ══ -->
+  <div id="screen-result" class="screen">
+    <div class="result-header">
+      <div class="result-title">Итоговая оценка эпика</div>
+      <div class="result-sp">
+        <div class="result-sp-num" id="res-sp">—</div>
+        <div class="result-sp-label">Story<br>Points</div>
+      </div>
+      <div class="result-explanation" id="res-explanation"></div>
+    </div>
+
+    <div>
+      <div class="section-title">Оценки по критериям</div>
+      <div class="criteria-grid" id="criteria-grid"></div>
+    </div>
+
+    <div class="result-footer">
+      <button class="btn btn-ghost" onclick="resetAll()">← Новая оценка</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════
+// PROMPTS — все 7 критериев + финал
+// ══════════════════════════════════════
+const CRITERIA_PROMPTS = [
+  {
+    name: "Тип изменений",
+    type: "base",
+    system: `Ты должен оценить Эпик в стори поинтах. Необходимо последовательно оценить каждый из 7-ми критериев после чего дать общую оценку Эпика. Оценка критериев будет происходить последовательно. Твоя задача оценить только один критерий.
+
+Что оцениваем: "Тип изменений". Данный критерией оценивает объем и сложность предпологаемых изменений.
+
+Как оцениваем: На основе описаний оценок сформировать вопросы, которые помогут в оценке критерия. Пользователь может ответить простым да/нет или дать развернутый ответ. Анализируя полученный ответ, сформировать новый вопрос, продолжая до тех пор, пока полученных ответов не будет достаточно для определения оценки. Вопросы должны начинаться от наименее сложной оценки и переходить к более сложным (большим) оценкам пока оценка не будет определена. Избегай неоднозначных вопросов, вопросов, содержащих "или", а так же вариативность в самом вопросе (несколько вариантов, опций). Вопрос должен быть, понятным, не должен содержать двусмысленности, хоршо, если на него можно ответить да или нет. 
+Вопросы должны строиться последовательно, сначала нужно узнать планируются ли определнные изменения или пристуствие ли определенная необходимость в чем то, прежде чем задавать вопросы уточняющие детали. Например, прежде чем спросить: "Доработка подразумевает изменение в одном файле конфигурации", нужно сначала уточнить, планируется ли вообще доработка конфигурации. Любой эпик подразумевает изменения для бэкендаБ этот вопрос можно пропустить.
+Обязательно: Так же задавай вопросы из оценок выше предполагаемых, чтобы убедиться в том, что большая оценка точно не подходит.
+
+Задача: Построить диалог где каждое твое сообщение это краткий вопрос, пgолучив ответ ты формируешь новый вопрос до тех пор пока не получишь достаточно ответов чтобы сформировать оценку Эпика.
+
+Эпик - изолированная часть доработок и/или новый функционал который планируется реализовать по требованию бизнеса. Изменения могут относиться к нескольких платформам (МП, бэк) или могут бытолько для одной (доработка МП или бэка). Как правило все доработки свзяаны с бэкендом, и любой эпик подразумевает изменения для бэкенда. МП учавствует как дополнительная интеграция которая требует доработок. Доработки МП оцениваем не в рамках этой оценки, здесь доработки МП только берем во внимание как усложнение в интеграции и тестировании.
+Оценка эпика - оценка в стори поинтах (story points, SP), целочисленное значение. Значения оценки возможны только из последовательности Фибоначчи начиная с 1.
+МП - мобильное приложение.
+BE (бэк) - back end приложения.
+Смежники - внешние сервисы/системы.
+
+Описание оценок:
+1 - Правки в одном модуле/классе (до 1–2 небольших методов) или одном конфиге; один эндпоинт без изменения контракта Правка копирайта в 1-3 местах Нет правок в навигации Простая правка AT (один сценарий) В целом - тут мы точно знаем что и где менять и эти изменения минимальны
+2 - Расширение существующих фич в рамках одного сценария Небольшие новые фичи с одним сценарием/одним эндпоинтом Без изменений в навигации и дополнительных сценариях. Или как в 1, но несколько раз в 2-3 местах
+3 - Несколько платформ (2–3) и/или несколько частей кода (микросервисы/части монолита). Нетиповая задача. Изменение / новые фичи для пары сценариев/эндпойнтов или CRUD Или как в 2, но несколько раз в 2-3 местах
+5 - Существенное расширение 2–3 сценариев: меняются ключевые шаги, статусы и ветвления. Несколько платформ/микросервисов (3–5), изменения в существующих контрактах и логике Или меняется поведение сценария целиком и требуется согласованное изменение интерфейса, бизнес-логики и данных
+8 - Новые коридоры/flow, несколько новых микросервисов, большой рефакторинг. Подключаются несколько доменов (дп/займы/коллектор/погашения/фрамос), затрагивается много сценариев, есть неопределённость в способе решения, требуется тех. проработка
+
+Если полученная оценка явно больше 8, оцениваем критерий в 377!
+
+ВАЖНО: Когда оценка определена — обязательно заверши своё сообщение меткой [DONE: X] где X — итоговое число SP (например [DONE: 3]). До этого момента метку не добавляй.`
+  },
+  {
+    name: "Компонентный состав",
+    type: "base",
+    system: `Ты должен оценить Эпик в стори поинтах. Твоя задача оценить только один критерий: "Компонентный состав". Данный критерий оценивает количество взаимодействующих компонентов.
+
+Как оцениваем: На основе описаний оценок сформировать вопросы с вариантами ответа "Да" или "Нет". Анализируя полученный ответ сформировать новый вопрос (если необходимо), до тех пор пока полученных ответов не будет достаточно для определения оценки. Вопросы должны начинаться от наименее сложной оценки и переходить к более сложным. Задавай вопросы из оценок выше предполагаемых, чтобы убедиться что большая оценка не подходит.
+
+Каждое твоё сообщение — краткий вопрос с ответами "Да" или "Нет".
+
+Описание оценок:
+1 - 1 компонент (Back или DB или Android/iOS или WEB/js‑скрипт или автотесты). Изменения локальны
+2 - 2-3 компонента (Back/Mobile/Web/AT) или несколько (2-3) мест в монолите или затронуто 2-3 микросервиса. Объём умеренный (примерно 1 экран + 2-3 класса). Тестирование: нужно проверить больше одного кейса, но все проверки линейные. Каркас микросервиса
+3 - Компонентный состав аналогичен 2. Количество микросервисов/затронутых мест в монолите 3+. Меняются интерфейсы взаимодействия в большей степени, чем 1 новый вызов. Меняются контракты взаимодействия. Значительные трудозатраты на тестирование
+5 - Компонентный состав аналогичен 2. Количество микросервисов 3+. Минимум дважды меняются интерфейсы и контракты взаимодействия. Значительные трудозатраты на тестирование. Есть необходимость гонять длинный end‑to‑end флоу через несколько систем
+8 - Множественные изменения в нескольких компонентах и подсистемах; несколько доменов; множественные изменения в монолитах; системный рефакторинг
+
+Если полученная оценка явно больше 8, оцениваем критерий в 377!
+
+ВАЖНО: Когда оценка определена — обязательно заверши своё сообщение меткой [DONE: X] где X — итоговое число SP. До этого момента метку не добавляй.`
+  },
+  {
+    name: "Интеграции",
+    type: "base",
+    system: `Ты должен оценить Эпик в стори поинтах. Твоя задача оценить только один критерий: "Интеграции". Данный критерий оценивает количество и сложность интеграций (межсервисные, между платформами Бэк/МП, со смежниками).
+
+Как оцениваем: вопросы с ответами "Да"/"Нет", от простого к сложному, проверяй оценки выше.
+
+Каждое твоё сообщение — краткий вопрос.
+
+Описание оценок:
+1 - Интеграции не затрагиваются, либо очень лёгкая (существующий клиент/URL без смены контракта). Интеграционное тестирование не требуется
+2 - Одна простая интеграция в рамках одного сервиса/пары (Back–WEB или Back–один внутренний сервис). Операции CRUD без сложных бизнес‑правил. Интеграционное тестирование: 1–2 позитивных и 2-3 негативных сценария
+3 - Интеграционные цепочки между 2-3 слоями, CRUD для сложных объектов, интеграции в знакомых сервисах (возможно внешние, типа 1С/ML/КС, но уже известные)
+5 - Новые внешние интеграции или существенная переработка существующих (изменяются контракты, добавляются новые методы/статусы). Многошаговые интеграционные процессы между 2–3 внешними/смежными системами. Интеграционное тестирование со смежниками, ручные моки/заглушки, специфичная настройка стендов
+8 - Комплексные интеграции с внешними системами (банки, платёжные системы, БКИ...). Комплексные интеграции со смежниками типа ISP, ЗК. Интеграционное тестирование «со всем миром». Распределенные многошаговые процессы, влияющие на весь пользовательский флоу
+
+Если полученная оценка явно больше 8, оцениваем критерий в 377!
+
+ВАЖНО: Когда оценка определена — заверши сообщение меткой [DONE: X]. До этого момента метку не добавляй.`
+  },
+  {
+    name: "Бизнес-логика",
+    type: "base",
+    system: `Ты должен оценить Эпик в стори поинтах. Твоя задача оценить только один критерий: "Бизнес‑логика". Данный критерий оценивает сложность и определённость/неопределённость логики для реализации.
+
+Как оцениваем: вопросы с ответами "Да"/"Нет", от простого к сложному, проверяй оценки выше.
+
+Каждое твоё сообщение — краткий вопрос.
+
+Описание оценок:
+1 - Простая логика: минимальное изменение существующей логики, одно условие/флаг, смежный функционал не затрагивается. Процесс понятен и описан однозначно
+2 - Простая логика, один новый режим/правило; линейный сценарий без ветвлений и альтернативных флоу
+3 - Логика сложнее чем в 2. Затронуто 2-3 статуса/сценария и/или затронут смежный функционал. Бизнес‑сценарий в целом понятен, есть небольшая неопределённость
+5 - Сложная бизнес‑логика с несколькими (3–4) состояниями и развилками, распределённая между 2–3 сервисами или платформами. Затронуто несколько связанных сценариев, есть зависимости между условиями. Требуется изменить структуру процесса
+8 - Сложные бизнес-правила с несколькими (4+) состояниями и ветвящимися сценариями, распределенные между 3+ сервисами. Пересмотр базовых бизнес-правил/бизнес-сценариев
+
+Если полученная оценка явно больше 8, оцениваем критерий в 377!
+
+ВАЖНО: Когда оценка определена — заверши сообщение меткой [DONE: X]. До этого момента метку не добавляй.`
+  },
+  {
+    name: "Риски и последствия ошибок",
+    type: "extra",
+    system: `Ты должен оценить Эпик в стори поинтах. Твоя задача оценить только один критерий: "Риски и последствия ошибок". Данный критерий оценивает потенциальные риски и стоимость при возникновении ошибок.
+
+Как оцениваем: вопросы с ответами "Да"/"Нет", от простого к сложному, проверяй оценки выше.
+
+Каждое твоё сообщение — краткий вопрос.
+
+Описание оценок:
+1 - Ошибка почти безболезненна. Локальный баг. Не влияет на деньги, клиентов и регуляторов; чинится быстро и дёшево локальным фиксом
+2 - Ограниченный риск. Ошибка заметна, но влияет на небольшую группу пользователей или редкие сценарии. Финансовых и регуляторных последствий нет; есть простой способ компенсации
+3 - Уже чувствительно. Ошибка влияет на качество работы продукта на уровне страны/сегмента. Возможны инциденты и внутренние расследования, но всё решаемо в рамках обычных процессов
+5 - Высокий риск. Ошибка бьёт по деньгам, скорингу, платежам, сложным лимитам. Возможны дорогие инциденты, серьёзные разборы с участием риск‑менеджмента/безопасности
+8 - Максимальный риск. Ошибка создаёт системные последствия: массовые клиенты, фундаментальная кредитная/платёжная логика. Реально возможны регуляторные претензии, AML/суды
+
+Если полученная оценка явно больше 8, оцениваем критерий в 377!
+
+ВАЖНО: Когда оценка определена — заверши сообщение меткой [DONE: X]. До этого момента метку не добавляй.`
+  },
+  {
+    name: "Коммуникации",
+    type: "extra",
+    system: `Ты должен оценить Эпик в стори поинтах. Твоя задача оценить только один критерий: "Коммуникации". Данный критерий оценивает сложность и необходимость взаимодействий с другими командами/людьми во время разработки.
+
+Как оцениваем: вопросы с ответами "Да"/"Нет", от простого к сложному, проверяй оценки выше.
+
+Каждое твоё сообщение — краткий вопрос.
+
+Описание оценок:
+1 - Не нужны или минимальны. Все вопросы решаются внутри одной команды/сервиса, ИТ‑взаимодействие снаружи не нужно
+2 - Есть понятный источник ответов. Вопросы решаются в рамках одного подразделения/продукта. Небольшая неопределённость снимается за 1–2 итерации
+3 - 2+ команд взаимодействуют. Внешних зависимостей либо нет, либо есть одна и мы знаем, что коммуникации с ней обычно не вызывают затруднений
+5 - 2 или более команд вынуждены плотно взаимодействовать. Есть внешняя зависимость, коммуникация с которой обычно вызывает затруднения; ключевые решения завязаны на стейкхолдера который отвечает с большой задержкой
+8 - Обязательные ИТ‑и бизнес‑коммуникации с внешними организациями (банки, IPS, регуляторы). Несколько внешних команд от которых зависят сроки. Часть работ решается организационно/юридически
+
+Если полученная оценка явно больше 8, оцениваем критерий в 377!
+
+ВАЖНО: Когда оценка определена — заверши сообщение меткой [DONE: X]. До этого момента метку не добавляй.`
+  },
+  {
+    name: "Тестирование",
+    type: "extra",
+    system: `Ты должен оценить Эпик в стори поинтах. Твоя задача оценить только один критерий: "Тестирование". Данный критерий оценивает сложность и необходимость тестирования.
+
+Как оцениваем: вопросы с ответами "Да"/"Нет", от простого к сложному, проверяй оценки выше.
+
+Каждое твоё сообщение — краткий вопрос.
+
+Описание оценок:
+1 - Тестирование минимально: прогон 1–2 простых сценариев, регресс не нужен или полностью закрыт автотестами, заглушки не нужны, тестовая документация актуальна
+2 - Объём больше чем 1, сценарии несложны. Небольшой ручной регресс. Требуется небольшая настройка тестовых комплексов и доработка заглушек. Правки в АТ простые
+3 - Большой объём при простых сценариях или средний при нетривиальных. Есть неопределённость в воспроизведении. Сложности в подготовке тестовых данных, зависимости от внешних систем. Значительный объём изменений в артефакты тестирования
+5 - Большой объём тестирования с нетривиальными сценариями. Новые цепочки флоу. Влияние на большой объём существующих сценариев. Полноценный комплекс тестов, нагрузочное тестирование требуется
+8 - Масштаб фактически отдельный «под‑проект» по тестированию. Полный регресс большого куска системы. Создание с нуля инфраструктуры АТ. Поднимать и поддерживать несколько стендов. Серьёзная перестройка документации
+
+Если полученная оценка явно больше 8, оцениваем критерий в 377!
+
+ВАЖНО: Когда оценка определена — заверши сообщение меткой [DONE: X]. До этого момента метку не добавляй.`
+  }
+];
+
+const FINAL_SYSTEM = `Ты должен оценить Эпик в стори поинтах. Эпик был предварительно оценен по каждому из 7-ми критериев. Руководствуясь правилами, дай финальную оценку эпику.
+
+Алгоритм оценки:
+1. Выбираем максимальную оценку из базовых критериев
+2. Выбираем максимальную оценку из дополнительных критериев
+3. Если максимальная оценка дополнительного критерия больше максимальной базовой — увеличиваем максимальную оценку базового критерия на 1 шаг в последовательности Фибоначчи. Результат принимаем за итоговую оценку эпика.
+
+Базовые критерии: "Тип изменений", "Компонентный состав", "Интеграции", "Бизнес‑логика"
+Дополнительные критерии: "Риски и последствия ошибок", "Коммуникации", "Тестирование"
+
+Последовательность Фибоначчи: 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377
+
+Верни ответ строго в формате JSON без пояснений:
+{"finalSP": <число>, "explanation": "<краткое объяснение алгоритма расчёта на русском, 1-2 предложения>"}`;
+
+// ══════════════════════════════════════
+// CONFIG — меняйте только здесь
+// ══════════════════════════════════════
+const CONFIG = {
+  API_KEY:    "api-key",      // ← ваш API ключ
+  API_URL:    "https://ai.kth.pro/api/chat/completions",  // ← URL эндпоинта
+  // MODEL:      "Vision",                                   // ← модель
+  MODEL:      "Instruct",                                 // ← модель
+  MAX_TOKENS: 10000,
+};
+
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+const S = {
+  currentIdx: 0,
+  history: [],       // [{role, content}] текущего критерия
+  scores: [],        // [{name, type, sp}]
+  loading: false,
+  awaitingAdvance: false
+};
+
+// ══════════════════════════════════════
+// DEBUG
+// ══════════════════════════════════════
+function escHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+let debugEnabled = false;
+let debugCounter = 0;
+
+function toggleDebug() {
+  debugEnabled = !debugEnabled;
+  document.getElementById('debug-track').classList.toggle('on', debugEnabled);
+  document.getElementById('debug-drawer').classList.toggle('open', debugEnabled);
+}
+
+function clearDebug() {
+  debugCounter = 0;
+  document.getElementById('debug-log').innerHTML =
+    '<div class="debug-empty">Лог очищен.</div>';
+}
+
+function debugLog(type, data) {
+  if (!debugEnabled) return;
+  debugCounter++;
+  const log = document.getElementById('debug-log');
+
+  const empty = log.querySelector('.debug-empty');
+  if (empty) empty.remove();
+
+  const now = new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const id = `de-${debugCounter}`;
+
+  const entry = document.createElement('div');
+  entry.className = `debug-entry ${type}`;
+
+  let headText = '', headRight = '', bodyHTML = '';
+
+  if (type === 'request') {
+    const msgs = data.messages || [];
+    headText = `▲ запрос <span class="debug-entry-num">#${debugCounter}</span>`;
+    headRight = `${now} · ${data.model}`;
+    bodyHTML = msgs.map(m => {
+      const cls = m.role === 'system' ? 'system-msg' : m.role === 'user' ? 'user-msg' : 'asst-msg';
+      return `<div class="debug-section">
+        <div class="debug-section-label">${m.role.toUpperCase()}</div>
+        <div class="debug-code ${cls}">${escHtml(m.content)}</div>
+      </div>`;
+    }).join('');
+  } else if (type === 'response') {
+    headText = `▼ ответ <span class="debug-entry-num">#${debugCounter}</span>`;
+    headRight = now;
+    bodyHTML = `<div class="debug-section">
+      <div class="debug-code response">${escHtml(data)}</div>
+    </div>`;
+  } else if (type === 'error') {
+    headText = `✕ ошибка <span class="debug-entry-num">#${debugCounter}</span>`;
+    headRight = now;
+    bodyHTML = `<div class="debug-section">
+      <div class="debug-code error-msg">${escHtml(String(data))}</div>
+    </div>`;
+  }
+
+  entry.innerHTML = `
+    <div class="debug-entry-head" onclick="toggleEntry('${id}')">
+      <span>${headText} <span class="debug-entry-arrow" id="arr-${id}">▾</span></span>
+      <span class="debug-entry-time">${headRight}</span>
+    </div>
+    <div class="debug-entry-body" id="${id}">${bodyHTML}</div>`;
+
+  log.appendChild(entry);
+  requestAnimationFrame(() => { log.scrollTop = log.scrollHeight; });
+}
+
+function toggleEntry(id) {
+  const body = document.getElementById(id);
+  const arrow = document.getElementById('arr-' + id);
+  if (!body) return;
+  const collapsed = body.style.display === 'none';
+  body.style.display = collapsed ? '' : 'none';
+  if (arrow) arrow.textContent = collapsed ? '▾' : '▸';
+}
+
+// ══════════════════════════════════════
+// API
+// ══════════════════════════════════════
+async function callClaude(messages, system) {
+  // Собираем массив сообщений: system-промт идёт первым если есть
+  const fullMessages = system
+    ? [{ role: "system", content: system }, ...messages]
+    : messages;
+
+  const payload = {
+    model:      CONFIG.MODEL,
+    max_tokens: CONFIG.MAX_TOKENS,
+    messages:   fullMessages
+  };
+
+  debugLog('request', { messages: fullMessages, model: CONFIG.MODEL });
+
+  const res = await fetch(CONFIG.API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${CONFIG.API_KEY}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const msg = err?.error?.message || `HTTP ${res.status}`;
+    debugLog('error', msg);
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  const text = data.choices[0].message.content;
+  debugLog('response', text);
+  return text;
+}
+
+// ══════════════════════════════════════
+// UI
+// ══════════════════════════════════════
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function setLoading(v) {
+  S.loading = v;
+  document.getElementById('loading-overlay').classList.toggle('show', v);
+  refreshInputState();
+}
+
+function addMsg(role, text) {
+  const area = document.getElementById('chat-area');
+  const cleanText = text.replace(/\[DONE:\s*\d+\]/g, '').trim();
+  if (!cleanText) return;
+  const wrap = document.createElement('div');
+  wrap.className = `msg msg-${role}`;
+
+  const av = document.createElement('div');
+  av.className = 'avatar';
+  if (role === 'ai') {
+    av.innerHTML = 'E<span class="avatar-logo-dot">.</span>E';
+    av.classList.add('avatar-logo');
+  } else {
+    av.textContent = 'Вы';
+  }
+
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  // strip [DONE: X] from display
+  bub.textContent = cleanText;
+
+  wrap.appendChild(av);
+  wrap.appendChild(bub);
+  area.appendChild(wrap);
+  area.scrollTop = area.scrollHeight;
+}
+
+function showScoreBadge(sp) {
+  const area = document.getElementById('chat-area');
+  const badge = document.createElement('div');
+  badge.className = 'score-badge';
+  badge.innerHTML = `<span>Оценка критерия:</span><span class="sp">${sp} SP</span>`;
+  area.appendChild(badge);
+  area.scrollTop = area.scrollHeight;
+}
+
+function refreshInputState() {
+  const disabled = S.loading || S.awaitingAdvance;
+  document.getElementById('btn-yes').disabled = disabled;
+  document.getElementById('btn-no').disabled  = disabled;
+  document.getElementById('btn-send').disabled = disabled;
+  document.getElementById('free-input').disabled = disabled;
+}
+
+function showCriterionResultCard(sp) {
+  const area = document.getElementById('chat-area');
+  const card = document.createElement('div');
+  const isLast = S.currentIdx === CRITERIA_PROMPTS.length - 1;
+  const nextLabel = isLast ? 'Показать итоговую оценку →' : 'Следующий критерий →';
+
+  card.className = 'criterion-result-card';
+  card.innerHTML = `
+    <div class="criterion-result-text">
+      <strong>Критерий завершен.</strong><br>
+      Результат сохранен: <strong>${sp} SP</strong>. Когда будете готовы, перейдите дальше.
+    </div>
+    <button class="btn btn-primary" type="button" onclick="advanceCriterion()">${nextLabel}</button>`;
+
+  area.appendChild(card);
+  area.scrollTop = area.scrollHeight;
+}
+
+function updateProgress() {
+  const idx = S.currentIdx;
+  const total = CRITERIA_PROMPTS.length;
+  const crit = CRITERIA_PROMPTS[idx];
+  document.getElementById('crit-name').textContent = crit.name;
+  document.getElementById('crit-num').textContent  = `${idx + 1} / ${total}`;
+  document.getElementById('prog-fill').style.width = `${(idx / total) * 100}%`;
+}
+
+// ══════════════════════════════════════
+// FLOW
+// ══════════════════════════════════════
+async function startSession() {
+  S.currentIdx = 0;
+  S.scores = [];
+  S.awaitingAdvance = false;
+
+  show('screen-chat');
+  await openCriterion();
+}
+
+async function openCriterion() {
+  S.history = [];
+  S.awaitingAdvance = false;
+  document.getElementById('chat-area').innerHTML = '';
+  document.getElementById('free-input').value = '';
+  updateProgress();
+  refreshInputState();
+
+  const crit = CRITERIA_PROMPTS[S.currentIdx];
+  const firstUserMsg = `Начни оценку критерия "${crit.name}". Задай первый вопрос.`;
+
+  setLoading(true);
+  try {
+    const reply = await callClaude(
+      [{ role: 'user', content: firstUserMsg }],
+      crit.system
+    );
+    S.history.push({ role: 'user', content: firstUserMsg });
+    S.history.push({ role: 'assistant', content: reply });
+    addMsg('ai', reply);
+
+    const done = parseDone(reply);
+    if (done !== null) {
+      handleCriterionDone(done);
+      return;
+    }
+    enableInput();
+  } catch(e) {
+    addMsg('ai', 'Ошибка: ' + e.message);
+    enableInput();
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function sendAnswer(text) {
+  if (S.loading || S.awaitingAdvance || !text.trim()) return;
+  document.getElementById('free-input').value = '';
+  addMsg('usr', text);
+  S.history.push({ role: 'user', content: text });
+
+  setLoading(true);
+  try {
+    const crit = CRITERIA_PROMPTS[S.currentIdx];
+    const reply = await callClaude(S.history, crit.system);
+    S.history.push({ role: 'assistant', content: reply });
+    addMsg('ai', reply);
+
+    const done = parseDone(reply);
+    if (done !== null) {
+      handleCriterionDone(done);
+      return;
+    }
+    enableInput();
+  } catch(e) {
+    addMsg('ai', 'Ошибка: ' + e.message);
+    enableInput();
+  } finally {
+    setLoading(false);
+  }
+}
+
+function quickAnswer(v) { sendAnswer(v); }
+function sendFree() {
+  const v = document.getElementById('free-input').value.trim();
+  if (v) sendAnswer(v);
+}
+
+function enableInput() {
+  S.awaitingAdvance = false;
+  refreshInputState();
+}
+
+function parseDone(text) {
+  const m = text.match(/\[DONE:\s*(\d+)\]/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function handleCriterionDone(sp) {
+  if (S.awaitingAdvance) return;
+  const crit = CRITERIA_PROMPTS[S.currentIdx];
+  S.scores.push({ name: crit.name, type: crit.type, sp });
+  S.awaitingAdvance = true;
+  showScoreBadge(sp);
+  showCriterionResultCard(sp);
+  refreshInputState();
+}
+
+async function advanceCriterion() {
+  if (S.loading || !S.awaitingAdvance) return;
+  S.awaitingAdvance = false;
+  S.currentIdx++;
+
+  if (S.currentIdx < CRITERIA_PROMPTS.length) {
+    await openCriterion();
+  } else {
+    await buildFinalResult();
+  }
+}
+
+async function buildFinalResult() {
+  show('screen-result');
+  document.getElementById('res-sp').textContent = '...';
+  document.getElementById('res-explanation').textContent = 'Считаю итоговую оценку...';
+
+  const scoresText = S.scores.map(s => `${s.name} (${s.type === 'base' ? 'базовый' : 'дополнительный'}): ${s.sp} SP`).join('\n');
+  const prompt = `Оценки по критериям:\n${scoresText}\n\nОпредели финальную оценку эпика по алгоритму.`;
+
+  try {
+    const raw = await callClaude([{ role: 'user', content: prompt }], FINAL_SYSTEM);
+    let data;
+    try { data = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch(_) { data = null; }
+
+    if (data) {
+      document.getElementById('res-sp').textContent = data.finalSP;
+      document.getElementById('res-explanation').textContent = data.explanation || '';
+    } else {
+      document.getElementById('res-sp').textContent = '?';
+      document.getElementById('res-explanation').textContent = raw;
+    }
+  } catch(e) {
+    document.getElementById('res-sp').textContent = '?';
+    document.getElementById('res-explanation').textContent = 'Ошибка: ' + e.message;
+  }
+
+  renderCriteriaGrid();
+}
+
+function renderCriteriaGrid() {
+  const grid = document.getElementById('criteria-grid');
+  grid.innerHTML = '';
+  const maxSP = Math.max(...S.scores.map(s => s.sp), 1);
+
+  S.scores.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'crit-row';
+    const pct = Math.min((s.sp / Math.max(maxSP, 8)) * 100, 100);
+    row.innerHTML = `
+      <div class="crit-type ${s.type}">${s.type === 'base' ? 'базовый' : 'доп.'}</div>
+      <div class="crit-name">${s.name}</div>
+      <div class="crit-bar-wrap">
+        <div class="crit-bar"><div class="crit-bar-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="crit-sp">${s.sp}</div>`;
+    grid.appendChild(row);
+  });
+}
+
+function resetAll() {
+  S.currentIdx = 0;
+  S.history = []; S.scores = []; S.loading = false; S.awaitingAdvance = false;
+  document.getElementById('chat-area').innerHTML = '';
+  document.getElementById('criteria-grid').innerHTML = '';
+  show('screen-start');
+}
+
+// Enter to send
+document.getElementById('free-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); sendFree(); }
+});
+</script>
+</body>
+</html>
