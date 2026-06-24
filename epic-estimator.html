@@ -1268,8 +1268,14 @@ function parseExpressDone(text) {
 async function buildExpressResult(data) {
   S.scores = data.scores || [];
   show('screen-result');
-  document.getElementById('res-sp').textContent = data.finalSP ?? '?';
-  document.getElementById('res-explanation').textContent = data.explanation || '';
+
+  // Финальная оценка пересчитывается локально по тому же алгоритму,
+  // что и в детальном режиме — LLM-значение из data.finalSP не используется.
+  const finalSP     = calcFinalSP(S.scores);
+  const explanation = buildExplanation(S.scores, finalSP);
+
+  document.getElementById('res-sp').textContent          = finalSP;
+  document.getElementById('res-explanation').textContent = explanation;
   renderCriteriaGrid();
 }
 
@@ -1375,30 +1381,63 @@ async function advanceCriterion() {
   }
 }
 
+// Шкала Фибоначчи, используемая для оценки эпиков в story points.
+const FIBONACCI = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377];
+
+// Вычисляет финальную оценку эпика по массиву оценок критериев.
+// Алгоритм:
+//   1. Берём максимум среди базовых критериев (type === 'base').
+//   2. Берём максимум среди дополнительных критериев (type === 'extra').
+//   3. Если max(extra) > max(base) — сдвигаем max(base) на один шаг вверх
+//      по шкале Фибоначчи (результат и есть финальная оценка).
+//   4. Иначе финальная оценка равна max(base).
+function calcFinalSP(scores) {
+  const baseScores  = scores.filter(s => s.type === 'base').map(s => s.sp);
+  const extraScores = scores.filter(s => s.type === 'extra').map(s => s.sp);
+
+  const maxBase  = baseScores.length  ? Math.max(...baseScores)  : 0;
+  const maxExtra = extraScores.length ? Math.max(...extraScores) : 0;
+
+  if (maxExtra > maxBase) {
+    // Дополнительный критерий превышает базовый — повышаем оценку на 1 шаг Фибоначчи.
+    const idx = FIBONACCI.indexOf(maxBase);
+    // Если значение не найдено в шкале, ищем ближайшее снизу.
+    const baseIdx = idx !== -1 ? idx : FIBONACCI.findLastIndex(f => f <= maxBase);
+    const nextIdx = Math.min(baseIdx + 1, FIBONACCI.length - 1);
+    return FIBONACCI[nextIdx];
+  }
+
+  // Дополнительные критерии не превышают базовые — берём максимум базовых.
+  return maxBase || FIBONACCI[0];
+}
+
+// Формирует текстовое объяснение алгоритма расчёта для отображения пользователю.
+function buildExplanation(scores, finalSP) {
+  const baseScores  = scores.filter(s => s.type === 'base');
+  const extraScores = scores.filter(s => s.type === 'extra');
+  const maxBase     = Math.max(...baseScores.map(s => s.sp), 0);
+  const maxExtra    = Math.max(...extraScores.map(s => s.sp), 0);
+
+  const baseCrit  = baseScores.find(s => s.sp === maxBase);
+  const extraCrit = extraScores.find(s => s.sp === maxExtra);
+
+  let explanation = `Максимум базовых критериев: ${maxBase} SP (${baseCrit?.name ?? '—'}).`;
+  if (maxExtra > maxBase) {
+    explanation += ` Дополнительный критерий «${extraCrit?.name ?? '—'}» (${maxExtra} SP) превышает базовый — оценка повышена на 1 шаг Фибоначчи до ${finalSP} SP.`;
+  } else {
+    explanation += ` Дополнительные критерии не превышают базовые — итоговая оценка равна максимуму базовых.`;
+  }
+  return explanation;
+}
+
 async function buildFinalResult() {
   show('screen-result');
-  document.getElementById('res-sp').textContent = '...';
-  document.getElementById('res-explanation').textContent = 'Считаю итоговую оценку...';
 
-  const scoresText = S.scores.map(s => `${s.name} (${s.type === 'base' ? 'базовый' : 'дополнительный'}): ${s.sp} SP`).join('\n');
-  const prompt = `Оценки по критериям:\n${scoresText}\n\nОпредели финальную оценку эпика по алгоритму.`;
+  const finalSP   = calcFinalSP(S.scores);
+  const explanation = buildExplanation(S.scores, finalSP);
 
-  try {
-    const raw = await callClaude([{ role: 'user', content: prompt }], FINAL_SYSTEM);
-    let data;
-    try { data = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch(_) { data = null; }
-
-    if (data) {
-      document.getElementById('res-sp').textContent = data.finalSP;
-      document.getElementById('res-explanation').textContent = data.explanation || '';
-    } else {
-      document.getElementById('res-sp').textContent = '?';
-      document.getElementById('res-explanation').textContent = raw;
-    }
-  } catch(e) {
-    document.getElementById('res-sp').textContent = '?';
-    document.getElementById('res-explanation').textContent = 'Ошибка: ' + e.message;
-  }
+  document.getElementById('res-sp').textContent          = finalSP;
+  document.getElementById('res-explanation').textContent = explanation;
 
   renderCriteriaGrid();
 }
