@@ -1260,7 +1260,7 @@ async function sendExpressAnswer(text) {
 }
 
 function parseExpressDone(text) {
-  const m = text.match(/\[EXPRESS_DONE:(\{[\s\S]*?\})\]/);
+  const m = text.match(/\[EXPRESS_DONE:(\{[\s\S]*\})\]/);
   if (!m) return null;
   try { return JSON.parse(m[1]); } catch(_) { return null; }
 }
