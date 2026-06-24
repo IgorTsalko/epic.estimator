@@ -490,6 +490,48 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
 .debug-code.asst-msg   { color: #c8f0c8; }
 .debug-code.response   { color: #4ac87a; }
 .debug-code.error-msg  { color: #f07070; }
+
+/* ── MODE TOGGLE ── */
+.mode-toggle-wrap { display: flex; flex-direction: column; gap: 10px; }
+.mode-toggle {
+  display: inline-flex; border: 2px solid var(--border);
+  border-radius: var(--r); overflow: hidden; align-self: flex-start;
+}
+.mode-btn {
+  padding: 8px 20px; font-family: var(--font-head); font-weight: 700;
+  font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+  background: transparent; color: var(--ink2); border: none;
+  cursor: pointer; transition: all var(--tr);
+}
+.mode-btn.active { background: var(--ink); color: var(--bg); }
+.mode-btn:not(.active):hover { background: var(--chip-bg); color: var(--ink); }
+.mode-desc {
+  font-size: 12px; color: var(--ink2);
+  padding: 8px 12px; background: var(--chip-bg);
+  border-radius: var(--r); border-left: 3px solid var(--border);
+  line-height: 1.55;
+}
+.mode-desc.express { border-left-color: var(--accent); }
+
+/* ── EXPRESS CHAT ── */
+.express-header {
+  display: flex; align-items: center; gap: 10px;
+  padding-bottom: 16px; border-bottom: 1.5px solid var(--border); margin-bottom: 4px;
+  flex-shrink: 0;
+}
+.express-badge {
+  font-family: var(--font-head); font-weight: 700; font-size: 10px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 20px;
+  background: var(--accent); color: #fff;
+}
+.express-title {
+  font-family: var(--font-head); font-weight: 700; font-size: 13px; color: var(--ink);
+}
+.express-phase {
+  font-size: 11px; color: var(--ink2); margin-left: auto;
+  font-family: var(--font-head); letter-spacing: 0.06em; text-transform: uppercase;
+}
 </style>
 </head>
 <body>
@@ -536,6 +578,15 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
       Точность 95%.
       Нам доверяют во всей Korona.Tex
     </p>
+    <div class="mode-toggle-wrap">
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="mode-btn-standard" onclick="setMode('standard')">Стандартная</button>
+        <button class="mode-btn"        id="mode-btn-express"  onclick="setMode('express')">Экспресс</button>
+      </div>
+      <div class="mode-desc" id="mode-desc-standard">Детальная оценка — AI последовательно задаёт вопросы по каждому из 7 критериев.</div>
+      <div class="mode-desc express" id="mode-desc-express" style="display:none">Быстрая оценка — опишите эпик одним сообщением, AI сразу оценит по всем критериям. При необходимости задаст уточняющие вопросы одним сообщением.</div>
+    </div>
+
     <button class="btn btn-primary" onclick="startSession()" id="start-btn">
       Начать оценку →
     </button>
@@ -543,7 +594,8 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
 
   <!-- ══ SCREEN 2 ══ -->
   <div id="screen-chat" class="screen">
-    <div class="progress-wrap">
+    <!-- Standard mode progress -->
+    <div class="progress-wrap" id="progress-standard">
       <div class="progress-top">
         <div class="criterion-name" id="crit-name">—</div>
         <div class="criterion-num" id="crit-num">1 / 7</div>
@@ -551,6 +603,12 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
       <div class="progress-track">
         <div class="progress-fill" id="prog-fill" style="width:0%"></div>
       </div>
+    </div>
+    <!-- Express mode header -->
+    <div class="express-header" id="progress-express" style="display:none">
+      <span class="express-badge">Экспресс</span>
+      <span class="express-title">Оценка эпика</span>
+      <span class="express-phase" id="express-phase-label"></span>
     </div>
 
     <div class="chat-area" id="chat-area"></div>
@@ -747,6 +805,80 @@ BE (бэк) - back end приложения.
   }
 ];
 
+const EXPRESS_SYSTEM = `Ты — инструмент экспресс-оценки эпика в story points. Пользователь описал эпик в одном сообщении.
+
+Твоя задача:
+1. Изучи описание эпика.
+2. Оцени каждый из 7 критериев на основе доступной информации.
+3. Если для оценки каких-то критериев не хватает данных или есть неоднозначность, влияющая на оценку — задай ВСЕ уточняющие вопросы ОДНИМ сообщением (нумерованный список). Ждёшь ответа и выносишь итоговую оценку.
+4. Если данных достаточно — сразу выноси оценку без уточнений.
+
+ВАЖНО: Уточнения допускаются только один раз. Если после уточнений что-то осталось неясным — оценивай по наихудшему сценарию.
+
+Критерии и шкалы оценки:
+
+1. "Тип изменений" (базовый) — объём и сложность предполагаемых изменений:
+   1 — Правки в одном модуле/классе, один эндпоинт без изменения контракта
+   2 — Расширение существующих фич в рамках одного сценария, один эндпоинт
+   3 — Несколько платформ (2–3) и/или частей кода, изменения для пары сценариев/эндпоинтов
+   5 — Существенное расширение 2–3 сценариев, несколько платформ/микросервисов (3–5), изменения в контрактах
+   8 — Новые flow, несколько новых микросервисов, большой рефакторинг, есть неопределённость
+
+2. "Компонентный состав" (базовый) — количество взаимодействующих компонентов:
+   1 — 1 компонент, изменения локальны
+   2 — 2–3 компонента или несколько мест в монолите, умеренный объём
+   3 — 3+ микросервисов/мест, меняются интерфейсы и контракты
+   5 — 3+ микросервисов, минимум дважды меняются интерфейсы и контракты, end-to-end флоу
+   8 — Множественные изменения в нескольких компонентах, системный рефакторинг
+
+3. "Интеграции" (базовый) — количество и сложность интеграций:
+   1 — Интеграции не затрагиваются или очень лёгкая
+   2 — Одна простая интеграция в рамках одного сервиса
+   3 — Интеграционные цепочки между 2–3 слоями, знакомые внешние сервисы
+   5 — Новые внешние интеграции или существенная переработка, многошаговые процессы
+   8 — Комплексные интеграции с внешними системами (банки, платёжные системы, БКИ…)
+
+4. "Бизнес-логика" (базовый) — сложность и определённость логики реализации:
+   1 — Простая логика, одно условие/флаг, процесс однозначно описан
+   2 — Один новый режим/правило, линейный сценарий без ветвлений
+   3 — 2–3 статуса/сценария, небольшая неопределённость
+   5 — Сложная логика с несколькими состояниями и развилками, распределённая между сервисами
+   8 — 4+ состояний, пересмотр базовых бизнес-правил
+
+5. "Риски и последствия ошибок" (дополнительный) — потенциальные риски при ошибках:
+   1 — Локальный баг, не влияет на деньги и клиентов
+   2 — Ограниченный риск, небольшая группа пользователей
+   3 — Влияет на качество работы продукта на уровне страны/сегмента
+   5 — Высокий риск: деньги, скоринг, платежи, сложные лимиты
+   8 — Системные последствия: массовые клиенты, регуляторные претензии, AML
+
+6. "Коммуникации" (дополнительный) — необходимость взаимодействий с другими командами:
+   1 — Не нужны или минимальны, всё внутри одной команды
+   2 — В рамках одного подразделения, снимается за 1–2 итерации
+   3 — 2+ команд, внешних сложных зависимостей нет
+   5 — Несколько команд, внешние зависимости с задержками
+   8 — ИТ- и бизнес-коммуникации с внешними организациями
+
+7. "Тестирование" (дополнительный) — сложность и объём тестирования:
+   1 — 1–2 простых сценария, регресс закрыт автотестами
+   2 — Небольшой ручной регресс, небольшая настройка тестовых комплексов
+   3 — Большой объём или нетривиальные сценарии, зависимости от внешних систем
+   5 — Нетривиальные сценарии, новые цепочки флоу, нагрузочное тестирование
+   8 — Полный регресс большого куска системы, создание инфраструктуры АТ с нуля
+
+Если по любому критерию оценка явно больше 8 — ставь 377.
+
+Алгоритм финальной оценки:
+1. Максимум из базовых критериев (1–4)
+2. Максимум из дополнительных критериев (5–7)
+3. Если max(дополнительных) > max(базовых) → увеличить max(базовых) на 1 шаг Фибоначчи
+Шкала Фибоначчи: 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377
+
+Когда готов выносить итоговую оценку — заверши сообщение строго этой меткой (JSON без пробелов после двоеточий в ключах):
+[EXPRESS_DONE:{"scores":[{"name":"Тип изменений","type":"base","sp":N},{"name":"Компонентный состав","type":"base","sp":N},{"name":"Интеграции","type":"base","sp":N},{"name":"Бизнес-логика","type":"base","sp":N},{"name":"Риски и последствия ошибок","type":"extra","sp":N},{"name":"Коммуникации","type":"extra","sp":N},{"name":"Тестирование","type":"extra","sp":N}],"finalSP":N,"explanation":"..."}]
+
+До вынесения оценки метку не добавляй.`;
+
 const FINAL_SYSTEM = `Ты должен оценить Эпик в стори поинтах. Эпик был предварительно оценен по каждому из 7-ми критериев. Руководствуясь правилами, дай финальную оценку эпику.
 
 Алгоритм оценки:
@@ -781,7 +913,9 @@ const S = {
   history: [],       // [{role, content}] текущего критерия
   scores: [],        // [{name, type, sp}]
   loading: false,
-  awaitingAdvance: false
+  awaitingAdvance: false,
+  expressMode: false,
+  expressPhase: null  // 'running' | 'clarification' | 'done'
 };
 
 // ══════════════════════════════════════
@@ -958,11 +1092,24 @@ function showScoreBadge(sp) {
 }
 
 function refreshInputState() {
-  const disabled = S.loading || S.awaitingAdvance;
-  document.getElementById('btn-yes').disabled = disabled;
-  document.getElementById('btn-no').disabled  = disabled;
-  document.getElementById('btn-send').disabled = disabled;
-  document.getElementById('free-input').disabled = disabled;
+  const ynRow   = document.querySelector('.yn-row');
+  const freeRow = document.querySelector('.free-row');
+  if (S.expressMode) {
+    ynRow.style.display = 'none';
+    const canType = !S.loading && S.expressPhase === 'clarification';
+    document.getElementById('btn-send').disabled  = !canType;
+    document.getElementById('free-input').disabled = !canType;
+    document.getElementById('free-input').placeholder = canType
+      ? 'Ответьте на уточняющие вопросы...' : '';
+  } else {
+    ynRow.style.display = '';
+    const disabled = S.loading || S.awaitingAdvance;
+    document.getElementById('btn-yes').disabled   = disabled;
+    document.getElementById('btn-no').disabled    = disabled;
+    document.getElementById('btn-send').disabled  = disabled;
+    document.getElementById('free-input').disabled = disabled;
+    document.getElementById('free-input').placeholder = 'Или напишите свой ответ...';
+  }
 }
 
 function showCriterionResultCard(sp) {
@@ -995,13 +1142,135 @@ function updateProgress() {
 // ══════════════════════════════════════
 // FLOW
 // ══════════════════════════════════════
+function setMode(mode) {
+  S.expressMode = mode === 'express';
+  document.getElementById('mode-btn-standard').classList.toggle('active', !S.expressMode);
+  document.getElementById('mode-btn-express').classList.toggle('active',  S.expressMode);
+  document.getElementById('mode-desc-standard').style.display = S.expressMode ? 'none' : '';
+  document.getElementById('mode-desc-express').style.display  = S.expressMode ? '' : 'none';
+  document.getElementById('start-btn').textContent = S.expressMode
+    ? 'Запустить экспресс-оценку →' : 'Начать оценку →';
+  const ta = document.getElementById('epic-input');
+  ta.placeholder = S.expressMode
+    ? 'Опишите эпик: что планируется сделать, какие компоненты затрагиваются, нужные интеграции, бизнес-логика, возможные риски...'
+    : 'Краткое название или описание эпика (опционально)';
+}
+
 async function startSession() {
+  const epicText = document.getElementById('epic-input').value.trim();
+
+  if (S.expressMode) {
+    if (!epicText) {
+      const err = document.getElementById('error-start');
+      err.textContent = 'В экспресс-режиме необходимо описать эпик.';
+      err.style.display = 'block';
+      return;
+    }
+    document.getElementById('error-start').style.display = 'none';
+    S.scores = [];
+    S.history = [];
+    S.loading = false;
+    S.awaitingAdvance = false;
+    S.expressPhase = 'running';
+    document.getElementById('progress-standard').style.display = 'none';
+    document.getElementById('progress-express').style.display  = '';
+    document.getElementById('express-phase-label').textContent = 'Анализ...';
+    show('screen-chat');
+    document.getElementById('chat-area').innerHTML = '';
+    document.getElementById('free-input').value = '';
+    refreshInputState();
+    await runExpressSession(epicText);
+    return;
+  }
+
+  document.getElementById('error-start').style.display = 'none';
   S.currentIdx = 0;
   S.scores = [];
   S.awaitingAdvance = false;
-
+  document.getElementById('progress-standard').style.display = '';
+  document.getElementById('progress-express').style.display  = 'none';
   show('screen-chat');
   await openCriterion();
+}
+
+async function runExpressSession(epicText) {
+  addMsg('usr', epicText);
+  S.history = [{ role: 'user', content: epicText }];
+
+  setLoading(true);
+  try {
+    const reply = await callClaude(S.history, EXPRESS_SYSTEM);
+    S.history.push({ role: 'assistant', content: reply });
+
+    const done = parseExpressDone(reply);
+    if (done) {
+      addMsg('ai', reply);
+      S.expressPhase = 'done';
+      document.getElementById('express-phase-label').textContent = 'Готово';
+      refreshInputState();
+      await buildExpressResult(done);
+    } else {
+      addMsg('ai', reply);
+      S.expressPhase = 'clarification';
+      document.getElementById('express-phase-label').textContent = 'Нужны уточнения';
+      refreshInputState();
+    }
+  } catch(e) {
+    addMsg('ai', 'Ошибка: ' + e.message);
+    S.expressPhase = 'clarification';
+    refreshInputState();
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function sendExpressAnswer(text) {
+  if (S.loading || S.expressPhase !== 'clarification' || !text.trim()) return;
+  document.getElementById('free-input').value = '';
+  addMsg('usr', text);
+  S.history.push({ role: 'user', content: text });
+  S.expressPhase = 'running';
+  document.getElementById('express-phase-label').textContent = 'Анализ...';
+
+  setLoading(true);
+  try {
+    const reply = await callClaude(S.history, EXPRESS_SYSTEM);
+    S.history.push({ role: 'assistant', content: reply });
+    addMsg('ai', reply);
+
+    const done = parseExpressDone(reply);
+    if (done) {
+      S.expressPhase = 'done';
+      document.getElementById('express-phase-label').textContent = 'Готово';
+      refreshInputState();
+      await buildExpressResult(done);
+    } else {
+      // second pass still no scores — enable input as fallback
+      S.expressPhase = 'clarification';
+      document.getElementById('express-phase-label').textContent = 'Нужны уточнения';
+      refreshInputState();
+    }
+  } catch(e) {
+    addMsg('ai', 'Ошибка: ' + e.message);
+    S.expressPhase = 'clarification';
+    refreshInputState();
+  } finally {
+    setLoading(false);
+  }
+}
+
+function parseExpressDone(text) {
+  const m = text.match(/\[EXPRESS_DONE:(\{[\s\S]*?\})\]/);
+  if (!m) return null;
+  try { return JSON.parse(m[1]); } catch(_) { return null; }
+}
+
+async function buildExpressResult(data) {
+  S.scores = data.scores || [];
+  show('screen-result');
+  document.getElementById('res-sp').textContent = data.finalSP ?? '?';
+  document.getElementById('res-explanation').textContent = data.explanation || '';
+  renderCriteriaGrid();
 }
 
 async function openCriterion() {
@@ -1069,7 +1338,9 @@ async function sendAnswer(text) {
 function quickAnswer(v) { sendAnswer(v); }
 function sendFree() {
   const v = document.getElementById('free-input').value.trim();
-  if (v) sendAnswer(v);
+  if (!v) return;
+  if (S.expressMode) sendExpressAnswer(v);
+  else sendAnswer(v);
 }
 
 function enableInput() {
@@ -1155,8 +1426,11 @@ function renderCriteriaGrid() {
 function resetAll() {
   S.currentIdx = 0;
   S.history = []; S.scores = []; S.loading = false; S.awaitingAdvance = false;
+  S.expressPhase = null;
   document.getElementById('chat-area').innerHTML = '';
   document.getElementById('criteria-grid').innerHTML = '';
+  document.getElementById('progress-standard').style.display = '';
+  document.getElementById('progress-express').style.display  = 'none';
   show('screen-start');
 }
 
