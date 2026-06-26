@@ -424,11 +424,10 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
 .summary-copy-btn {
   font-size: 11px; font-family: var(--font-head); font-weight: 600;
   letter-spacing: 0.05em; text-transform: uppercase;
-  padding: 4px 10px; border-radius: 5px;
+  padding: 5px 7px; border-radius: 5px;
   border: 1.5px solid var(--border); background: var(--bg);
-  color: var(--ink2); cursor: pointer;
+  color: var(--ink2); cursor: pointer; display: flex; align-items: center;
   transition: border-color 0.15s, color 0.15s;
-  white-space: nowrap;
 }
 .summary-copy-btn:hover { border-color: var(--ink); color: var(--ink); }
 .summary-copy-btn.copied { border-color: #34a853; color: #34a853; }
@@ -707,8 +706,10 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
 
     <div class="summary-block" id="summary-block">
       <div class="summary-header" onclick="toggleSummary()">
-        <span class="summary-toggle-label">Итог оценки для Jira</span>
-        <button class="summary-copy-btn" id="summary-copy-btn" onclick="copySummary(event)" title="Скопировать текст">Копировать</button>
+        <span class="summary-toggle-label">Итог</span>
+        <button class="summary-copy-btn" id="summary-copy-btn" onclick="copySummary(event)" title="Скопировать текст">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
         <span class="summary-chevron">▼</span>
       </div>
       <div class="summary-body" id="summary-body"></div>
@@ -1614,9 +1615,8 @@ function buildSummaryText(scores, finalSP) {
   lines.push(`Итоговая оценка эпика: ${finalSP} SP\n`);
   lines.push('Оценки по критериям:');
   scores.forEach(s => {
-    const typeLabel = s.type === 'base' ? 'базовый' : 'доп.';
     const reasonPart = s.reason ? ` — ${s.reason.trim()}` : '';
-    lines.push(`• ${s.name} [${typeLabel}]: ${s.sp} SP${reasonPart}`);
+    lines.push(`• ${s.name}: ${s.sp} SP${reasonPart}`);
   });
   return lines.join('\n');
 }
@@ -1638,10 +1638,10 @@ function copySummary(e) {
   const text = document.getElementById('summary-body').textContent;
   navigator.clipboard.writeText(text).then(() => {
     const btn = document.getElementById('summary-copy-btn');
-    btn.textContent = 'Скопировано!';
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
     btn.classList.add('copied');
     setTimeout(() => {
-      btn.textContent = 'Копировать';
+      btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
       btn.classList.remove('copied');
     }, 2000);
   });
