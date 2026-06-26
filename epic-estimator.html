@@ -332,7 +332,10 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
 }
 
 /* ══ SCREEN 3: RESULT ══ */
-#screen-result { padding-top: 24px; overflow-y: auto; gap: 28px; }
+#screen-result { padding-top: 24px; gap: 28px; }
+
+body.result-mode { overflow-y: auto; }
+body.result-mode #app { height: auto; min-height: calc(100vh - 24px); }
 
 .result-header { border-bottom: 2px solid var(--ink); padding-bottom: 20px; }
 .result-title {
@@ -1481,6 +1484,7 @@ function parseExpressDone(text) {
 async function buildExpressResult(data) {
   S.scores = data.scores || [];
   show('screen-result');
+  document.body.classList.add('result-mode');
 
   // Финальная оценка пересчитывается локально по тому же алгоритму,
   // что и в детальном режиме — LLM-значение из data.finalSP не используется.
@@ -1658,6 +1662,7 @@ function buildExplanation(scores, finalSP) {
 
 async function buildFinalResult() {
   show('screen-result');
+  document.body.classList.add('result-mode');
 
   const finalSP   = calcFinalSP(S.scores);
   const explanation = buildExplanation(S.scores, finalSP);
@@ -1742,6 +1747,7 @@ function resetAll() {
   S.currentIdx = 0;
   S.history = []; S.scores = []; S.loading = false; S.awaitingAdvance = false;
   S.expressPhase = null;
+  document.body.classList.remove('result-mode');
   document.getElementById('chat-area').innerHTML = '';
   document.getElementById('criteria-grid').innerHTML = '';
   document.getElementById('progress-standard').style.display = '';
