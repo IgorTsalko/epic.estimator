@@ -178,6 +178,14 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
   display: flex; justify-content: space-between; align-items: baseline;
   margin-bottom: 10px;
 }
+.btn-cancel-assessment {
+  font-family: var(--font-head); font-weight: 600; font-size: 11px;
+  letter-spacing: 0.04em; color: var(--ink2); background: transparent;
+  border: 1.5px solid var(--border); border-radius: var(--r);
+  padding: 4px 12px; cursor: pointer; transition: all var(--tr);
+  white-space: nowrap;
+}
+.btn-cancel-assessment:hover { color: var(--ink); border-color: #b9c4d0; background: var(--chip-bg); }
 .criterion-name {
   font-family: var(--font-head); font-weight: 700;
   font-size: 14px; color: var(--ink);
@@ -682,7 +690,10 @@ body.result-mode #app { height: auto; min-height: calc(100vh - 24px); }
     <div class="progress-wrap" id="progress-standard">
       <div class="progress-top">
         <div class="criterion-name" id="crit-name">—</div>
-        <div class="criterion-num" id="crit-num">1 / 7</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="criterion-num" id="crit-num">1 / 7</div>
+          <button class="btn-cancel-assessment" onclick="cancelAssessment()">✕ Отменить</button>
+        </div>
       </div>
       <div class="progress-track">
         <div class="progress-fill" id="prog-fill" style="width:0%"></div>
@@ -693,6 +704,7 @@ body.result-mode #app { height: auto; min-height: calc(100vh - 24px); }
       <span class="express-badge">Экспресс</span>
       <span class="express-title">Оценка эпика</span>
       <span class="express-phase" id="express-phase-label"></span>
+      <button class="btn-cancel-assessment" onclick="cancelAssessment()">✕ Отменить</button>
     </div>
 
     <div class="chat-area" id="chat-area"></div>
@@ -1770,6 +1782,12 @@ function copySummary(e) {
       btn.classList.remove('copied');
     }, 2000);
   });
+}
+
+function cancelAssessment() {
+  if (confirm('Прервать оценку и вернуться на главную страницу?')) {
+    resetAll();
+  }
 }
 
 function resetAll() {
