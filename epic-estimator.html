@@ -720,6 +720,17 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
 
 <script>
 // ══════════════════════════════════════
+// CONFIG — меняйте только здесь
+// ══════════════════════════════════════
+const CONFIG = {
+  API_KEY:    "api-key",      // ← ваш API ключ
+  API_URL:    "https://ai.kth.pro/api/chat/completions",  // ← URL эндпоинта
+  // MODEL:      "Vision",                                   // ← модель
+  MODEL:      "Instruct",                                 // ← модель
+  MAX_TOKENS: 10000,
+};
+
+// ══════════════════════════════════════
 // PROMPTS — все 7 критериев + финал
 // ══════════════════════════════════════
 const CRITERIA_PROMPTS = [
@@ -981,17 +992,6 @@ const FINAL_SYSTEM = `Ты должен оценить Эпик в стори п
 
 Верни ответ строго в формате JSON без пояснений:
 {"finalSP": <число>, "explanation": "<краткое объяснение алгоритма расчёта на русском, 1-2 предложения>"}`;
-
-// ══════════════════════════════════════
-// CONFIG — меняйте только здесь
-// ══════════════════════════════════════
-const CONFIG = {
-  API_KEY:    "api-key",      // ← ваш API ключ
-  API_URL:    "https://ai.kth.pro/api/chat/completions",  // ← URL эндпоинта
-  // MODEL:      "Vision",                                   // ← модель
-  MODEL:      "Instruct",                                 // ← модель
-  MAX_TOKENS: 10000,
-};
 
 // ══════════════════════════════════════
 // STATE
