@@ -294,6 +294,19 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
 .criterion-result-card .btn {
   align-self: flex-start;
 }
+.crit-result-reason {
+  font-size: 13px;
+  color: var(--ink2);
+  line-height: 1.6;
+  border-left: 2px solid var(--accent);
+  padding-left: 10px;
+}
+.criterion-result-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
 
 /* chat footer */
 .chat-footer {
@@ -778,7 +791,7 @@ const CRITERIA_PROMPTS = [
 
 ФОРМАТ ОТВЕТА — строго один из двух:
 • Уточнение: только [QUESTIONS]...[/QUESTIONS], без [DONE].
-• Результат: краткое обоснование + [DONE: X] в конце, без [QUESTIONS].`
+• Результат: краткое обоснование (1–2 предложения, не больше) + [DONE: X] в конце, без [QUESTIONS].`
   },
   {
     name: "Компонентный состав",
@@ -809,7 +822,7 @@ const CRITERIA_PROMPTS = [
 
 ФОРМАТ ОТВЕТА — строго один из двух:
 • Уточнение: только [QUESTIONS]...[/QUESTIONS], без [DONE].
-• Результат: краткое обоснование + [DONE: X] в конце, без [QUESTIONS].`
+• Результат: краткое обоснование (1–2 предложения, не больше) + [DONE: X] в конце, без [QUESTIONS].`
   },
   {
     name: "Интеграции",
@@ -840,7 +853,7 @@ const CRITERIA_PROMPTS = [
 
 ФОРМАТ ОТВЕТА — строго один из двух:
 • Уточнение: только [QUESTIONS]...[/QUESTIONS], без [DONE].
-• Результат: краткое обоснование + [DONE: X] в конце, без [QUESTIONS].`
+• Результат: краткое обоснование (1–2 предложения, не больше) + [DONE: X] в конце, без [QUESTIONS].`
   },
   {
     name: "Бизнес-логика",
@@ -872,7 +885,7 @@ const CRITERIA_PROMPTS = [
 
 ФОРМАТ ОТВЕТА — строго один из двух:
 • Уточнение: только [QUESTIONS]...[/QUESTIONS], без [DONE].
-• Результат: краткое обоснование + [DONE: X] в конце, без [QUESTIONS].`
+• Результат: краткое обоснование (1–2 предложения, не больше) + [DONE: X] в конце, без [QUESTIONS].`
   },
   {
     name: "Риски и последствия ошибок",
@@ -904,7 +917,7 @@ const CRITERIA_PROMPTS = [
 
 ФОРМАТ ОТВЕТА — строго один из двух:
 • Уточнение: только [QUESTIONS]...[/QUESTIONS], без [DONE].
-• Результат: краткое обоснование + [DONE: X] в конце, без [QUESTIONS].`
+• Результат: краткое обоснование (1–2 предложения, не больше) + [DONE: X] в конце, без [QUESTIONS].`
   },
   {
     name: "Коммуникации",
@@ -935,7 +948,7 @@ const CRITERIA_PROMPTS = [
 
 ФОРМАТ ОТВЕТА — строго один из двух:
 • Уточнение: только [QUESTIONS]...[/QUESTIONS], без [DONE].
-• Результат: краткое обоснование + [DONE: X] в конце, без [QUESTIONS].`
+• Результат: краткое обоснование (1–2 предложения, не больше) + [DONE: X] в конце, без [QUESTIONS].`
   },
   {
     name: "Тестирование",
@@ -967,7 +980,7 @@ const CRITERIA_PROMPTS = [
 
 ФОРМАТ ОТВЕТА — строго один из двух:
 • Уточнение: только [QUESTIONS]...[/QUESTIONS], без [DONE].
-• Результат: краткое обоснование + [DONE: X] в конце, без [QUESTIONS].`
+• Результат: краткое обоснование (1–2 предложения, не больше) + [DONE: X] в конце, без [QUESTIONS].`
   }
 ]
 
@@ -1084,6 +1097,8 @@ const S = {
   scores: [],        // [{name, type, sp}]
   loading: false,
   awaitingAdvance: false,
+  clarifying: false,
+  currentBadge: null,
   expressMode: false,
   expressPhase: null  // 'running' | 'clarification' | 'done'
 };
@@ -1294,6 +1309,7 @@ function showScoreBadge(sp) {
   badge.innerHTML = `<span>Оценка критерия:</span><span class="sp">${sp} SP</span>`;
   area.appendChild(badge);
   area.scrollTop = area.scrollHeight;
+  return badge;
 }
 
 function refreshInputState() {
@@ -1311,12 +1327,13 @@ function refreshInputState() {
     const disabled = S.loading || S.awaitingAdvance;
     document.getElementById('btn-send').disabled   = disabled;
     document.getElementById('free-input').disabled = disabled;
-    document.getElementById('free-input').placeholder = disabled ? '' : 'Опишите критерий...';
+    document.getElementById('free-input').placeholder = disabled ? ''
+      : S.clarifying ? 'Уточните детали критерия...' : 'Опишите критерий...';
     if (hint) hint.style.display = disabled ? 'none' : '';
   }
 }
 
-function showCriterionResultCard(sp) {
+function showCriterionResultCard(sp, reason) {
   const area = document.getElementById('chat-area');
   const card = document.createElement('div');
   const isLast = S.currentIdx === CRITERIA_PROMPTS.length - 1;
@@ -1324,14 +1341,28 @@ function showCriterionResultCard(sp) {
 
   card.className = 'criterion-result-card';
   card.innerHTML = `
-    <div class="criterion-result-text">
-      <strong>Критерий завершен.</strong><br>
-      Результат сохранен: <strong>${sp} SP</strong>. Когда будете готовы, перейдите дальше.
-    </div>
-    <button class="btn btn-primary" type="button" onclick="advanceCriterion()">${nextLabel}</button>`;
+    ${reason ? `<div class="crit-result-reason">${reason}</div>` : ''}
+    <div class="criterion-result-actions">
+      <button class="btn btn-ghost btn-clarify" type="button">Уточнить</button>
+      <button class="btn btn-primary" type="button" onclick="advanceCriterion()">${nextLabel}</button>
+    </div>`;
+
+  card.querySelector('.btn-clarify').addEventListener('click', () => clarifyCurrentCriterion(card));
 
   area.appendChild(card);
   area.scrollTop = area.scrollHeight;
+}
+
+function clarifyCurrentCriterion(card) {
+  if (S.loading) return;
+  card.remove();
+  S.currentBadge?.remove();
+  S.currentBadge = null;
+  S.scores.pop();
+  S.awaitingAdvance = false;
+  S.clarifying = true;
+  addMsg('ai', 'Уточните детали — я учту новую информацию и пересмотрю оценку.');
+  refreshInputState();
 }
 
 function updateProgress() {
@@ -1497,6 +1528,8 @@ async function buildExpressResult(data) {
 async function openCriterion() {
   S.history = [];
   S.awaitingAdvance = false;
+  S.clarifying = false;
+  S.currentBadge = null;
   document.getElementById('chat-area').innerHTML = '';
   document.getElementById('free-input').value = '';
   updateProgress();
@@ -1591,8 +1624,9 @@ function handleCriterionDone(sp) {
   const reason = extractReasoning(lastAiMsg);
   S.scores.push({ name: crit.name, type: crit.type, sp, reason });
   S.awaitingAdvance = true;
-  showScoreBadge(sp);
-  showCriterionResultCard(sp);
+  S.clarifying = false;
+  S.currentBadge = showScoreBadge(sp);
+  showCriterionResultCard(sp, reason);
   refreshInputState();
 }
 
@@ -1743,6 +1777,7 @@ function copySummary(e) {
 function resetAll() {
   S.currentIdx = 0;
   S.history = []; S.scores = []; S.loading = false; S.awaitingAdvance = false;
+  S.clarifying = false; S.currentBadge = null;
   S.expressPhase = null;
   document.body.classList.remove('result-mode');
   document.getElementById('chat-area').innerHTML = '';
