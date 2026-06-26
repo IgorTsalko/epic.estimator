@@ -598,6 +598,34 @@ body.result-mode #app { height: auto; min-height: calc(100vh - 24px); }
 }
 .mode-desc.express { border-left-color: var(--accent); }
 
+/* ── GUIDE DROPDOWN ── */
+.form-label-row {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.guide-toggle {
+  display: flex; align-items: center; gap: 4px;
+  background: none; border: none; cursor: pointer;
+  font-family: var(--font-head); font-weight: 600;
+  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink2); padding: 0; transition: color var(--tr);
+}
+.guide-toggle:hover { color: var(--accent); }
+.guide-toggle svg { transition: transform 0.22s ease; flex-shrink: 0; }
+.guide-toggle.open svg { transform: rotate(180deg); }
+.guide-body {
+  display: none;
+  background: var(--chip-bg); border: 1.5px solid var(--border);
+  border-radius: var(--r); padding: 14px 16px;
+  font-size: 12px; color: var(--ink2); line-height: 1.6;
+}
+.guide-body.open { display: block; }
+.guide-list {
+  margin: 0; padding: 0 0 0 16px;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.guide-list li { color: var(--ink2); }
+.guide-list li strong { color: var(--ink); }
+
 /* ── EXPRESS CHAT ── */
 .express-header {
   display: flex; align-items: center; gap: 10px;
@@ -669,11 +697,32 @@ body.result-mode #app { height: auto; min-height: calc(100vh - 24px); }
         <button class="mode-btn"        id="mode-btn-express"  onclick="setMode('express')">Экспресс</button>
       </div>
       <div class="mode-desc" id="mode-desc-standard">Детальная оценка — для каждого из 7 критериев вы описываете ситуацию, AI оценивает и при необходимости задаёт уточняющие вопросы.</div>
-      <div class="mode-desc express" id="mode-desc-express" style="display:none">Быстрая оценка — опишите эпик одним сообщением, AI сразу оценит по всем критериям. При необходимости задаст уточняющие вопросы одним сообщением.</div>
+      <div class="mode-desc express" id="mode-desc-express" style="display:none">Быстрая оценка — опишите какая работа предполагается по эпику. AI сразу оценит по всем критериям. При необходимости задаст уточняющие вопросы.</div>
     </div>
 
     <div class="form-group" id="epic-input-wrap" style="display:none">
-      <label class="form-label" for="epic-input">Описание эпика <span>*</span></label>
+      <div class="form-label-row">
+        <label class="form-label" for="epic-input">Описание эпика <span>*</span></label>
+        <!-- Guide dropdown -->
+        <button class="guide-toggle" id="guide-toggle-btn" onclick="toggleGuide()" type="button">
+          Что писать в описании
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="guide-body" id="guide-body">
+        <ul class="guide-list">
+          <li><strong>Тип изменений</strong> — новая функциональность, доработка или рефакторинг</li>
+          <li><strong>Компоненты</strong> — какие системы затрагиваются: Back, DB, Mobile, Web, AT, микросервисы</li>
+          <li><strong>Интеграции</strong> — внешние и внутренние системы или «нет»</li>
+          <li><strong>Бизнес-логика</strong> — суть правил и сложных сценариев</li>
+          <li><strong>Риски</strong> — последствия ошибок и сколько пользователей затронуто</li>
+          <li><strong>Коммуникации</strong> — зависимости от других команд</li>
+          <li><strong>Тестирование</strong> — сценарии, регресс, нужны ли моки или стенды</li>
+        </ul>
+      </div>
+
       <textarea id="epic-input" placeholder="Опишите эпик: что планируется сделать, какие компоненты затрагиваются, нужные интеграции, бизнес-логика, возможные риски..."></textarea>
     </div>
 
@@ -1387,6 +1436,13 @@ function updateProgress() {
 }
 
 // ══════════════════════════════════════
+function toggleGuide() {
+  const btn = document.getElementById('guide-toggle-btn');
+  const body = document.getElementById('guide-body');
+  const open = body.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+
 // FLOW
 // ══════════════════════════════════════
 function setMode(mode) {
