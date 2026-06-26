@@ -624,9 +624,6 @@ body.result-mode #app { height: auto; min-height: calc(100vh - 24px); }
   font-family: monospace; font-size: 11.5px; color: var(--ink);
   white-space: pre-wrap; line-height: 1.6;
 }
-.guide-criteria { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
-.guide-criterion { display: flex; flex-direction: column; gap: 2px; }
-.guide-criterion strong { color: var(--ink); font-size: 11.5px; }
 
 /* ── EXPRESS CHAT ── */
 .express-header {
@@ -717,23 +714,13 @@ body.result-mode #app { height: auto; min-height: calc(100vh - 24px); }
         </svg>
       </button>
       <div class="guide-body" id="guide-body">
-        <div>Опишите эпик по критериям ниже. Не нужно быть исчерпывающим — достаточно ключевых фактов.</div>
-        <code>Тип изменений: &lt;новая функциональность / доработка / рефакторинг&gt;, затрагиваемые модули/эндпоинты
-Компоненты: &lt;Back / DB / Mobile / Web / AT&gt;, микросервисы
-Интеграции: &lt;внешние/внутренние системы: 1С, банки, ML и др.&gt; или «нет»
-Бизнес-логика: &lt;суть правил, сложные сценарии, особые состояния&gt;
-Риски: &lt;финансовые/регуляторные последствия ошибок, кол-во затронутых пользователей&gt;
-Коммуникации: &lt;зависимости от других команд, внешние согласования&gt;
-Тестирование: &lt;что нужно тестировать, нужны ли моки/стенды, регресс&gt;</code>
-        <div class="guide-criteria">
-          <div class="guide-criterion"><strong>Тип изменений</strong> — новое, доработка или рефакторинг; какие модули/контракты меняются</div>
-          <div class="guide-criterion"><strong>Компоненты</strong> — какие системы задействованы: Back, DB, Mobile, Web, AT, микросервисы</div>
-          <div class="guide-criterion"><strong>Интеграции</strong> — внешние/внутренние системы, изменения контрактов</div>
-          <div class="guide-criterion"><strong>Бизнес-логика</strong> — сложность правил, ветвления, управление состоянием</div>
-          <div class="guide-criterion"><strong>Риски</strong> — финансовые/регуляторные последствия, масштаб затронутых пользователей</div>
-          <div class="guide-criterion"><strong>Коммуникации</strong> — зависимости от других команд, внешние согласования</div>
-          <div class="guide-criterion"><strong>Тестирование</strong> — сценарии, регресс, моки, инфраструктура</div>
-        </div>
+        <code>Тип изменений: &lt;новая функциональность / доработка / рефакторинг&gt;
+Компоненты: &lt;Back / DB / Mobile / Web / AT / микросервисы&gt;
+Интеграции: &lt;внешние и внутренние системы&gt; или «нет»
+Бизнес-логика: &lt;суть правил, сложные сценарии&gt;
+Риски: &lt;последствия ошибок, кол-во затронутых пользователей&gt;
+Коммуникации: &lt;зависимости от других команд&gt;
+Тестирование: &lt;сценарии, регресс, моки, стенды&gt;</code>
       </div>
 
       <textarea id="epic-input" placeholder="Опишите эпик: что планируется сделать, какие компоненты затрагиваются, нужные интеграции, бизнес-логика, возможные риски..."></textarea>
