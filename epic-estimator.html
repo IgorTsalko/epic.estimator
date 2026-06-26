@@ -332,7 +332,10 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
 }
 
 /* ══ SCREEN 3: RESULT ══ */
-#screen-result { padding-top: 24px; overflow-y: auto; gap: 28px; }
+#screen-result { padding-top: 24px; gap: 28px; }
+
+body.result-mode { overflow-y: auto; }
+body.result-mode #app { height: auto; min-height: calc(100vh - 24px); }
 
 .result-header { border-bottom: 2px solid var(--ink); padding-bottom: 20px; }
 .result-title {
@@ -341,7 +344,7 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
   color: var(--ink2); margin-bottom: 12px;
 }
 .result-sp {
-  display: flex; align-items: baseline; gap: 12px;
+  display: flex; align-items: flex-end; gap: 12px;
 }
 .result-sp-num {
   font-family: var(--font-head); font-weight: 900;
@@ -413,6 +416,7 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
 .summary-block {
   border: 1.5px solid var(--border); border-radius: var(--r);
   background: var(--surface); overflow: hidden;
+  flex-shrink: 0;
 }
 .summary-header {
   display: flex; align-items: center; gap: 10px;
@@ -440,7 +444,7 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
   display: none; padding: 12px 16px 14px;
   border-top: 1px solid var(--border);
   font-size: 13px; color: var(--ink2); line-height: 1.7;
-  white-space: pre-wrap; max-height: 300px; overflow-y: auto;
+  white-space: pre-wrap;
 }
 .summary-block.open .summary-body { display: block; }
 
@@ -1480,6 +1484,7 @@ function parseExpressDone(text) {
 async function buildExpressResult(data) {
   S.scores = data.scores || [];
   show('screen-result');
+  document.body.classList.add('result-mode');
 
   // Финальная оценка пересчитывается локально по тому же алгоритму,
   // что и в детальном режиме — LLM-значение из data.finalSP не используется.
@@ -1657,6 +1662,7 @@ function buildExplanation(scores, finalSP) {
 
 async function buildFinalResult() {
   show('screen-result');
+  document.body.classList.add('result-mode');
 
   const finalSP   = calcFinalSP(S.scores);
   const explanation = buildExplanation(S.scores, finalSP);
@@ -1741,6 +1747,7 @@ function resetAll() {
   S.currentIdx = 0;
   S.history = []; S.scores = []; S.loading = false; S.awaitingAdvance = false;
   S.expressPhase = null;
+  document.body.classList.remove('result-mode');
   document.getElementById('chat-area').innerHTML = '';
   document.getElementById('criteria-grid').innerHTML = '';
   document.getElementById('progress-standard').style.display = '';
