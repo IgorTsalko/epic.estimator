@@ -599,13 +599,15 @@ body.result-mode #app { height: auto; min-height: calc(100vh - 24px); }
 .mode-desc.express { border-left-color: var(--accent); }
 
 /* ── GUIDE DROPDOWN ── */
+.form-label-row {
+  display: flex; align-items: center; justify-content: space-between;
+}
 .guide-toggle {
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 4px;
   background: none; border: none; cursor: pointer;
   font-family: var(--font-head); font-weight: 600;
   font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--ink2); padding: 0; transition: color var(--tr);
-  align-self: flex-start;
 }
 .guide-toggle:hover { color: var(--accent); }
 .guide-toggle svg { transition: transform 0.22s ease; flex-shrink: 0; }
@@ -699,19 +701,16 @@ body.result-mode #app { height: auto; min-height: calc(100vh - 24px); }
     </div>
 
     <div class="form-group" id="epic-input-wrap" style="display:none">
-      <label class="form-label" for="epic-input">Описание эпика <span>*</span></label>
-
-      <!-- Guide dropdown -->
-      <button class="guide-toggle" id="guide-toggle-btn" onclick="toggleGuide()" type="button">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <circle cx="7" cy="7" r="6.25" stroke="currentColor" stroke-width="1.5"/>
-          <text x="7" y="11" text-anchor="middle" font-size="9" font-family="serif" fill="currentColor" font-weight="bold">?</text>
-        </svg>
-        Что писать в описании
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
+      <div class="form-label-row">
+        <label class="form-label" for="epic-input">Описание эпика <span>*</span></label>
+        <!-- Guide dropdown -->
+        <button class="guide-toggle" id="guide-toggle-btn" onclick="toggleGuide()" type="button">
+          Что писать в описании
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
       <div class="guide-body" id="guide-body">
         <ul class="guide-list">
           <li><strong>Тип изменений</strong> — новая функциональность, доработка или рефакторинг</li>
