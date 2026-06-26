@@ -1556,8 +1556,6 @@ async function sendAnswer(text) {
     // of whether there are also [QUESTIONS] in the same message.
     const done = parseDone(reply);
     if (done !== null) {
-      const reasoning = extractReasoning(reply);
-      if (reasoning) addMsg('ai', reasoning);
       handleCriterionDone(done);
       return;
     }
