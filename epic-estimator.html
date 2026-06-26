@@ -341,7 +341,7 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
   color: var(--ink2); margin-bottom: 12px;
 }
 .result-sp {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; align-items: flex-end; gap: 12px;
 }
 .result-sp-num {
   font-family: var(--font-head); font-weight: 900;
@@ -413,6 +413,7 @@ textarea#epic-input::placeholder { color: var(--ink2); opacity: 0.6; }
 .summary-block {
   border: 1.5px solid var(--border); border-radius: var(--r);
   background: var(--surface); overflow: hidden;
+  flex-shrink: 0;
 }
 .summary-header {
   display: flex; align-items: center; gap: 10px;
