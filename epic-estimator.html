@@ -617,13 +617,12 @@ body.result-mode #app { height: auto; min-height: calc(100vh - 24px); }
   font-size: 12px; color: var(--ink2); line-height: 1.6;
 }
 .guide-body.open { display: block; }
-.guide-body code {
-  display: block; background: var(--surface);
-  border: 1px solid var(--border); border-radius: 6px;
-  padding: 10px 12px; margin: 10px 0 4px;
-  font-family: monospace; font-size: 11.5px; color: var(--ink);
-  white-space: pre-wrap; line-height: 1.6;
+.guide-list {
+  margin: 0; padding: 0 0 0 16px;
+  display: flex; flex-direction: column; gap: 5px;
 }
+.guide-list li { color: var(--ink2); }
+.guide-list li strong { color: var(--ink); }
 
 /* ── EXPRESS CHAT ── */
 .express-header {
@@ -714,13 +713,15 @@ body.result-mode #app { height: auto; min-height: calc(100vh - 24px); }
         </svg>
       </button>
       <div class="guide-body" id="guide-body">
-        <code>Тип изменений: &lt;новая функциональность / доработка / рефакторинг&gt;
-Компоненты: &lt;Back / DB / Mobile / Web / AT / микросервисы&gt;
-Интеграции: &lt;внешние и внутренние системы&gt; или «нет»
-Бизнес-логика: &lt;суть правил, сложные сценарии&gt;
-Риски: &lt;последствия ошибок, кол-во затронутых пользователей&gt;
-Коммуникации: &lt;зависимости от других команд&gt;
-Тестирование: &lt;сценарии, регресс, моки, стенды&gt;</code>
+        <ul class="guide-list">
+          <li><strong>Тип изменений</strong> — новая функциональность, доработка или рефакторинг</li>
+          <li><strong>Компоненты</strong> — какие системы затрагиваются: Back, DB, Mobile, Web, AT, микросервисы</li>
+          <li><strong>Интеграции</strong> — внешние и внутренние системы или «нет»</li>
+          <li><strong>Бизнес-логика</strong> — суть правил и сложных сценариев</li>
+          <li><strong>Риски</strong> — последствия ошибок и сколько пользователей затронуто</li>
+          <li><strong>Коммуникации</strong> — зависимости от других команд</li>
+          <li><strong>Тестирование</strong> — сценарии, регресс, нужны ли моки или стенды</li>
+        </ul>
       </div>
 
       <textarea id="epic-input" placeholder="Опишите эпик: что планируется сделать, какие компоненты затрагиваются, нужные интеграции, бизнес-логика, возможные риски..."></textarea>
