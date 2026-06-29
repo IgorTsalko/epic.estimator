@@ -1290,12 +1290,14 @@ ${scale}
 ${indicators}
 
 Алгоритм:
-1. Сопоставь описание с ключевыми признаками выше. Если можешь определить оценку — выставляй СРАЗУ.
-2. Если не хватает ключевого признака и без него оценка принципиально меняется — задай вопрос только про него. Максимум 2 вопроса, только из списка выше.
-3. Если пользователь не уточнил — выставляй консервативную оценку.
+1. Принимай за истину ТОЛЬКО то, что написал пользователь. Что не упомянуто — считай отсутствующим. Не спрашивай о том, что пользователь не упомянул — просто считай это «нет».
+2. Сопоставь написанное с ключевыми признаками выше и выставляй оценку СРАЗУ.
+3. Вопрос задавай ТОЛЬКО если пользователь написал что-то неоднозначное и без уточнения невозможно выбрать между двумя соседними оценками. Например: написал «есть интеграция» — непонятно новая или существующая. Задай все нужные вопросы СРАЗУ в одном блоке [QUESTIONS]. Максимум 2 вопроса. Никогда не повторяй вопрос, который уже был задан в этом диалоге.
+4. Если пользователь уже ответил на вопрос хотя бы раз — больше вопросов не задавай, выставляй оценку немедленно.
+5. Если пользователь явно отказывается отвечать (пишет «не знаю», «пропусти», «думай сам», «решай сам», «без разницы», «нет информации» или что-то подобное) — НЕМЕДЛЕННО выставляй оценку на основе того, что известно, больше вопросов не задавай.
 
 ФОРМАТ ОТВЕТА — строго один из двух вариантов, без исключений:
-• Уточнение: ТОЛЬКО блок ниже, никакого текста до или после него, без [DONE]:
+• Уточнение: ТОЛЬКО блок ниже, никакого текста до или после него, без вводных слов («Уточнение:», «Уточните:» и т.п.), без [DONE]:
 [QUESTIONS]
 1. Вопрос?
 [/QUESTIONS]
@@ -1431,12 +1433,11 @@ const CRITERIA_PROMPTS = [
 const EXPRESS_SYSTEM = `Ты — инструмент экспресс-оценки эпика в story points.
 
 Принципы:
-— Всё, что сказал пользователь — принимай как истину, не переспрашивай.
-— Оценивай сразу, если описание содержит ключевые признаки хотя бы одной оценки.
-— Задавай уточнения ТОЛЬКО если без них оценка конкретного критерия меняется на 2+ шага по шкале И ключевой признак действительно отсутствует в описании.
-— Максимум 2 вопроса на весь эпик. Вопросы — только из списка ключевых признаков ниже, ничего своего не придумывай.
-— Если не хватает данных — оценивай консервативно (меньшее значение).
+— Принимай за истину ТОЛЬКО то, что написал пользователь. Что не упомянуто — считай отсутствующим, не спрашивай об этом.
+— Оценивай сразу на основе написанного.
+— Задавай уточнение ТОЛЬКО если пользователь написал что-то неоднозначное и без уточнения невозможно выбрать оценку по конкретному критерию. Максимум 2 вопроса на весь эпик, только из списка ключевых признаков ниже.
 — Уточнения допускаются один раз. После ответа — выставляй оценку без дополнительных вопросов.
+— Если пользователь явно отказывается отвечать («не знаю», «пропусти», «думай сам», «решай сам», «без разницы», «нет информации» или аналогично) — НЕМЕДЛЕННО выставляй оценку, больше вопросов не задавай.
 
 Если задаёшь вопросы — только так, без вводных слов и пояснений:
 1. [Вопрос]
@@ -1687,23 +1688,34 @@ function formatAiText(text) {
   const lines = text.split('\n');
   let html = '';
   let inList = false;
+  const listItems = [];
 
+  // Collect list items first to decide whether to render as ol or plain p
+  const segments = [];
+  let currentList = null;
   for (const raw of lines) {
     const line = raw.trim();
-    if (!line) {
-      if (inList) { html += '</ol>'; inList = false; }
-      continue;
-    }
+    if (!line) { if (currentList) { segments.push({ type: 'list', items: currentList }); currentList = null; } continue; }
     const listMatch = line.match(/^(\d+)[.)]\s+(.+)$/);
     if (listMatch) {
-      if (!inList) { html += '<ol class="ai-list">'; inList = true; }
-      html += `<li>${inlineFormat(listMatch[2])}</li>`;
+      if (!currentList) currentList = [];
+      currentList.push(listMatch[2]);
     } else {
-      if (inList) { html += '</ol>'; inList = false; }
-      html += `<p>${inlineFormat(line)}</p>`;
+      if (currentList) { segments.push({ type: 'list', items: currentList }); currentList = null; }
+      segments.push({ type: 'p', text: line });
     }
   }
-  if (inList) html += '</ol>';
+  if (currentList) segments.push({ type: 'list', items: currentList });
+
+  for (const seg of segments) {
+    if (seg.type === 'p') {
+      html += `<p>${inlineFormat(seg.text)}</p>`;
+    } else if (seg.items.length === 1) {
+      html += `<p>${inlineFormat(seg.items[0])}</p>`;
+    } else {
+      html += '<ol class="ai-list">' + seg.items.map(i => `<li>${inlineFormat(i)}</li>`).join('') + '</ol>';
+    }
+  }
   return html;
 }
 
@@ -2050,14 +2062,21 @@ function stripMarkers(text) {
     .replace(/\[QUESTIONS\]/gi, '')
     .replace(/\[\/QUESTIONS\]/gi, '')
     .replace(/\[DONE:\s*\d+\]/gi, '')
+    .replace(/^уточнени[ея][:\s]*/gim, '')
     .trim();
 }
 
 function handleCriterionDone(sp) {
   if (S.awaitingAdvance) return;
   const crit = CRITERIA_PROMPTS[S.currentIdx];
-  const lastAiMsg = S.history.filter(m => m.role === 'assistant').at(-1)?.content ?? '';
-  const reason = extractReasoning(lastAiMsg);
+  const aiMsgs = S.history.filter(m => m.role === 'assistant');
+  let reason = extractReasoning(aiMsgs.at(-1)?.content ?? '');
+  if (!reason.trim()) {
+    for (let i = aiMsgs.length - 2; i >= 0; i--) {
+      const candidate = extractReasoning(aiMsgs[i].content);
+      if (candidate.trim()) { reason = candidate; break; }
+    }
+  }
   S.scores.push({ name: crit.name, type: crit.type, sp, reason });
   S.awaitingAdvance = true;
   S.clarifying = false;
