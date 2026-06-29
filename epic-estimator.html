@@ -341,6 +341,101 @@ textarea#epic-input::placeholder { color: var(--ink3); }
 }
 .guide-list li strong { color: var(--ink); font-weight: 600; }
 
+/* ── ABBREVIATIONS ── */
+.abbr-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.abbr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.abbr-list:empty::after {
+  content: 'Словарь пуст — аббревиатуры не будут расшифрованы в промптах';
+  font-size: 12px;
+  color: var(--ink3);
+  font-style: italic;
+}
+.abbr-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.abbr-item-key {
+  font-weight: 700;
+  color: var(--accent2);
+  min-width: 36px;
+  flex-shrink: 0;
+}
+.abbr-item-sep {
+  color: var(--ink3);
+  flex-shrink: 0;
+}
+.abbr-item-val {
+  flex: 1;
+  color: var(--ink);
+}
+.abbr-item-note {
+  font-size: 11px;
+  color: var(--ink3);
+  background: var(--chip-bg);
+  border-radius: 4px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+.abbr-item-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink3);
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+  transition: color var(--tr);
+  flex-shrink: 0;
+}
+.abbr-item-del:hover { color: #dc2626; }
+.abbr-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.abbr-add-row input, .abbr-add-row select {
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color var(--tr);
+}
+.abbr-add-row input:focus, .abbr-add-row select:focus {
+  border-color: var(--accent2);
+}
+.abbr-input-abbr { width: 80px; }
+.abbr-input-meaning { flex: 1; min-width: 120px; }
+.abbr-input-note { width: 140px; }
+.abbr-add-row select { width: 140px; cursor: pointer; }
+.abbr-hint {
+  font-size: 11px;
+  color: var(--ink3);
+}
+
 /* ── START BUTTON ── */
 .start-row {
   display: flex;
@@ -1172,6 +1267,36 @@ body.result-mode #app { height: auto; min-height: 100vh; }
 
     <div id="error-start"></div>
 
+    <!-- Abbreviations Dictionary -->
+    <div class="abbr-panel">
+      <div class="form-label-row">
+        <div class="form-label">Словарь аббревиатур</div>
+        <button class="guide-toggle" id="abbr-toggle-btn" onclick="toggleAbbrPanel()" type="button">
+          Управление
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+            <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      <div id="abbr-list" class="abbr-list"></div>
+      <div class="abbr-body" id="abbr-body" style="display:none; flex-direction:column; gap:10px;">
+        <div class="abbr-add-row">
+          <input class="abbr-input-abbr" id="abbr-input-key" type="text" placeholder="МП" maxlength="20">
+          <input class="abbr-input-meaning" id="abbr-input-val" type="text" placeholder="Мобильное приложение" maxlength="120">
+          <select id="abbr-input-note">
+            <option value="">без метки</option>
+            <option value="сервис">сервис</option>
+            <option value="процесс">процесс</option>
+            <option value="система">система</option>
+            <option value="команда">команда</option>
+            <option value="термин">термин</option>
+          </select>
+          <button class="btn btn-secondary" onclick="addAbbreviation()" type="button" style="padding:7px 14px; font-size:12px;">Добавить</button>
+        </div>
+        <div class="abbr-hint">Аббревиатуры автоматически добавляются к каждому промпту, чтобы AI не задавал лишних вопросов.</div>
+      </div>
+    </div>
+
     <div class="start-row">
       <button class="btn btn-primary" onclick="startSession()" id="start-btn">
         Начать оценку →
@@ -1274,6 +1399,89 @@ const CONFIG = {
   MODEL:      "Instruct",                                 // ← модель
   MAX_TOKENS: 10000,
 };
+
+// ══════════════════════════════════════
+// ABBREVIATIONS DICTIONARY
+// ══════════════════════════════════════
+const ABBR_STORAGE_KEY = 'epic_abbreviations';
+const ABBR_DEFAULTS = [
+  { abbr: 'МП',  meaning: 'Мобильное приложение',   note: 'сервис' },
+  { abbr: 'ИТ',  meaning: 'Интеграционное тестирование', note: 'процесс' },
+  { abbr: 'ПЦ',  meaning: 'Процессинговый центр',    note: 'система' },
+];
+
+function loadAbbreviations() {
+  try {
+    const raw = localStorage.getItem(ABBR_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return ABBR_DEFAULTS.map(a => ({...a}));
+}
+
+function saveAbbreviations(list) {
+  localStorage.setItem(ABBR_STORAGE_KEY, JSON.stringify(list));
+}
+
+function buildAbbreviationsBlock() {
+  const list = loadAbbreviations();
+  if (!list.length) return '';
+  const lines = list.map(a => {
+    const note = a.note ? ` (${a.note})` : '';
+    return `  ${a.abbr} — ${a.meaning}${note}`;
+  }).join('\n');
+  return `\nСловарь аббревиатур (используй эти расшифровки, не задавай вопросов об этих сокращениях):\n${lines}\n`;
+}
+
+function renderAbbrList() {
+  const list = loadAbbreviations();
+  if (!localStorage.getItem(ABBR_STORAGE_KEY)) saveAbbreviations(list);
+  const el = document.getElementById('abbr-list');
+  if (!el) return;
+  el.innerHTML = list.map((a, i) => `
+    <div class="abbr-item">
+      <span class="abbr-item-key">${escHtml(a.abbr)}</span>
+      <span class="abbr-item-sep">—</span>
+      <span class="abbr-item-val">${escHtml(a.meaning)}</span>
+      ${a.note ? `<span class="abbr-item-note">${escHtml(a.note)}</span>` : ''}
+      <button class="abbr-item-del" onclick="deleteAbbreviation(${i})" title="Удалить">×</button>
+    </div>
+  `).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function addAbbreviation() {
+  const abbr = document.getElementById('abbr-input-key').value.trim().toUpperCase();
+  const meaning = document.getElementById('abbr-input-val').value.trim();
+  const note = document.getElementById('abbr-input-note').value;
+  if (!abbr || !meaning) return;
+  const list = loadAbbreviations();
+  const existing = list.findIndex(a => a.abbr === abbr);
+  if (existing >= 0) list[existing] = { abbr, meaning, note };
+  else list.push({ abbr, meaning, note });
+  saveAbbreviations(list);
+  document.getElementById('abbr-input-key').value = '';
+  document.getElementById('abbr-input-val').value = '';
+  document.getElementById('abbr-input-note').value = '';
+  renderAbbrList();
+}
+
+function deleteAbbreviation(idx) {
+  const list = loadAbbreviations();
+  list.splice(idx, 1);
+  saveAbbreviations(list);
+  renderAbbrList();
+}
+
+function toggleAbbrPanel() {
+  const body = document.getElementById('abbr-body');
+  const btn = document.getElementById('abbr-toggle-btn');
+  const open = body.style.display === 'flex';
+  body.style.display = open ? 'none' : 'flex';
+  btn.classList.toggle('open', !open);
+}
 
 // ══════════════════════════════════════
 // PROMPTS — шаблон + 7 критериев + финал
@@ -1637,8 +1845,12 @@ function toggleEntry(id) {
 // API
 // ══════════════════════════════════════
 async function callClaude(messages, system) {
-  const fullMessages = system
-    ? [{ role: "system", content: system }, ...messages]
+  const abbrBlock = buildAbbreviationsBlock();
+  const systemWithAbbr = system
+    ? (abbrBlock ? system + abbrBlock : system)
+    : (abbrBlock ? abbrBlock.trim() : undefined);
+  const fullMessages = systemWithAbbr
+    ? [{ role: "system", content: systemWithAbbr }, ...messages]
     : messages;
 
   const payload = {
@@ -2038,6 +2250,7 @@ document.addEventListener('DOMContentLoaded', () => {
       sendFree();
     }
   });
+  renderAbbrList();
 });
 
 function enableInput() {
