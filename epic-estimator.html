@@ -1276,6 +1276,24 @@ const CONFIG = {
 };
 
 // ══════════════════════════════════════
+// ABBREVIATIONS DICTIONARY
+// ══════════════════════════════════════
+const ABBREVIATIONS = [
+  { abbr: 'МП',  meaning: 'Мобильное приложение',        note: 'сервис'  },
+  { abbr: 'ИТ',  meaning: 'Интеграционное тестирование', note: 'процесс' },
+  { abbr: 'ПЦ',  meaning: 'Процессинговый центр',        note: 'система' },
+];
+
+function buildAbbreviationsBlock() {
+  if (!ABBREVIATIONS.length) return '';
+  const lines = ABBREVIATIONS.map(a => {
+    const note = a.note ? ` (${a.note})` : '';
+    return `  ${a.abbr} — ${a.meaning}${note}`;
+  }).join('\n');
+  return `\nСловарь аббревиатур (используй эти расшифровки, не задавай вопросов об этих сокращениях):\n${lines}\n`;
+}
+
+// ══════════════════════════════════════
 // PROMPTS — шаблон + 7 критериев + финал
 // ══════════════════════════════════════
 function buildCriterionSystem(name, subtitle, scale, indicators, context) {
@@ -1637,8 +1655,12 @@ function toggleEntry(id) {
 // API
 // ══════════════════════════════════════
 async function callClaude(messages, system) {
-  const fullMessages = system
-    ? [{ role: "system", content: system }, ...messages]
+  const abbrBlock = buildAbbreviationsBlock();
+  const systemWithAbbr = system
+    ? (abbrBlock ? system + abbrBlock : system)
+    : (abbrBlock ? abbrBlock.trim() : undefined);
+  const fullMessages = systemWithAbbr
+    ? [{ role: "system", content: systemWithAbbr }, ...messages]
     : messages;
 
   const payload = {
