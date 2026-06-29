@@ -2056,8 +2056,14 @@ function stripMarkers(text) {
 function handleCriterionDone(sp) {
   if (S.awaitingAdvance) return;
   const crit = CRITERIA_PROMPTS[S.currentIdx];
-  const lastAiMsg = S.history.filter(m => m.role === 'assistant').at(-1)?.content ?? '';
-  const reason = extractReasoning(lastAiMsg);
+  const aiMsgs = S.history.filter(m => m.role === 'assistant');
+  let reason = extractReasoning(aiMsgs.at(-1)?.content ?? '');
+  if (!reason.trim()) {
+    for (let i = aiMsgs.length - 2; i >= 0; i--) {
+      const candidate = extractReasoning(aiMsgs[i].content);
+      if (candidate.trim()) { reason = candidate; break; }
+    }
+  }
   S.scores.push({ name: crit.name, type: crit.type, sp, reason });
   S.awaitingAdvance = true;
   S.clarifying = false;
