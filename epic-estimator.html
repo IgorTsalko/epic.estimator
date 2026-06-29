@@ -1092,7 +1092,7 @@ body.result-mode #app { height: auto; min-height: 100vh; }
         AI-инструмент оценки
       </div>
       <div class="hero-title">Оценка эпика<br>в <em>story points</em></div>
-      <p class="hero-sub">Структурированная AI-оценка по 7 критериям с расчётом по шкале Фибоначчи. Задайте вопросы — получите обоснованную оценку.</p>
+      <p class="hero-sub">Структурированная AI-оценка по 7 критериям с расчётом по шкале Фибоначчи. Опишите эпик по критериям — получите обоснованную оценку.</p>
       <div class="hero-stats">
         <div class="stat-pill">
           <span class="stat-pill-icon">◈</span>
@@ -1100,7 +1100,7 @@ body.result-mode #app { height: auto; min-height: 100vh; }
         </div>
         <div class="stat-pill">
           <span class="stat-pill-icon">∞</span>
-          <span>Шкала <strong>Фибоначчи</strong></span>
+          <span><strong>SP</strong> по шкале Фибоначчи</span>
         </div>
         <div class="stat-pill">
           <span class="stat-pill-icon">◎</span>
@@ -2287,6 +2287,7 @@ function resetAll() {
   document.body.classList.remove('result-mode');
   document.getElementById('chat-area').innerHTML = '';
   document.getElementById('criteria-grid').innerHTML = '';
+  document.getElementById('epic-input').value = '';
   document.getElementById('progress-standard').style.display = '';
   document.getElementById('progress-express').style.display  = 'none';
   show('screen-start');
