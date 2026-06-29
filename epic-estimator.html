@@ -1291,12 +1291,13 @@ ${indicators}
 
 Алгоритм:
 1. Сопоставь описание с ключевыми признаками выше. Если можешь определить оценку — выставляй СРАЗУ.
-2. Если не хватает ключевого признака и без него оценка принципиально меняется — задай вопрос только про него. Максимум 2 вопроса, только из списка выше. Никогда не повторяй вопрос, который уже был задан в этом диалоге.
-3. Если пользователь явно отказывается отвечать (пишет «не знаю», «пропусти», «думай сам», «решай сам», «без разницы», «нет информации» или что-то подобное) — НЕМЕДЛЕННО выставляй консервативную оценку, больше вопросов не задавай.
-4. Если пользователь не уточнил достаточно — выставляй консервативную оценку.
+2. Если не хватает ключевого признака и без него оценка принципиально меняется — задай все нужные вопросы СРАЗУ в одном блоке [QUESTIONS]. Максимум 2 вопроса, только из списка выше. Никогда не повторяй вопрос, который уже был задан в этом диалоге.
+3. Если пользователь уже ответил на вопрос хотя бы раз — больше вопросов не задавай, выставляй оценку немедленно.
+4. Если пользователь явно отказывается отвечать (пишет «не знаю», «пропусти», «думай сам», «решай сам», «без разницы», «нет информации» или что-то подобное) — НЕМЕДЛЕННО выставляй консервативную оценку, больше вопросов не задавай.
+5. Если пользователь не уточнил достаточно — выставляй консервативную оценку.
 
 ФОРМАТ ОТВЕТА — строго один из двух вариантов, без исключений:
-• Уточнение: ТОЛЬКО блок ниже, никакого текста до или после него, без [DONE]:
+• Уточнение: ТОЛЬКО блок ниже, никакого текста до или после него, без вводных слов («Уточнение:», «Уточните:» и т.п.), без [DONE]:
 [QUESTIONS]
 1. Вопрос?
 [/QUESTIONS]
@@ -1689,23 +1690,34 @@ function formatAiText(text) {
   const lines = text.split('\n');
   let html = '';
   let inList = false;
+  const listItems = [];
 
+  // Collect list items first to decide whether to render as ol or plain p
+  const segments = [];
+  let currentList = null;
   for (const raw of lines) {
     const line = raw.trim();
-    if (!line) {
-      if (inList) { html += '</ol>'; inList = false; }
-      continue;
-    }
+    if (!line) { if (currentList) { segments.push({ type: 'list', items: currentList }); currentList = null; } continue; }
     const listMatch = line.match(/^(\d+)[.)]\s+(.+)$/);
     if (listMatch) {
-      if (!inList) { html += '<ol class="ai-list">'; inList = true; }
-      html += `<li>${inlineFormat(listMatch[2])}</li>`;
+      if (!currentList) currentList = [];
+      currentList.push(listMatch[2]);
     } else {
-      if (inList) { html += '</ol>'; inList = false; }
-      html += `<p>${inlineFormat(line)}</p>`;
+      if (currentList) { segments.push({ type: 'list', items: currentList }); currentList = null; }
+      segments.push({ type: 'p', text: line });
     }
   }
-  if (inList) html += '</ol>';
+  if (currentList) segments.push({ type: 'list', items: currentList });
+
+  for (const seg of segments) {
+    if (seg.type === 'p') {
+      html += `<p>${inlineFormat(seg.text)}</p>`;
+    } else if (seg.items.length === 1) {
+      html += `<p>${inlineFormat(seg.items[0])}</p>`;
+    } else {
+      html += '<ol class="ai-list">' + seg.items.map(i => `<li>${inlineFormat(i)}</li>`).join('') + '</ol>';
+    }
+  }
   return html;
 }
 
@@ -2052,6 +2064,7 @@ function stripMarkers(text) {
     .replace(/\[QUESTIONS\]/gi, '')
     .replace(/\[\/QUESTIONS\]/gi, '')
     .replace(/\[DONE:\s*\d+\]/gi, '')
+    .replace(/^уточнени[ея][:\s]*/gim, '')
     .trim();
 }
 
