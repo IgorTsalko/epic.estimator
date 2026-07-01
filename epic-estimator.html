@@ -1265,14 +1265,22 @@ body.result-mode #app { height: auto; min-height: 100vh; }
 
 <script>
 // ══════════════════════════════════════
-// CONFIG — меняйте только здесь
+// CONFIG
 // ══════════════════════════════════════
+// Значения подставляются из переменных окружения при развёртывании.
+// В k8s это делает nginx директивой sub_filter, заменяя плейсхолдеры __NAME__
+// на значения env-переменных пода при отдаче страницы (пример nginx-конфига —
+// в описании PR). При локальном запуске (Mac, открытие файла напрямую)
+// плейсхолдеры остаются как есть и игнорируются — работают значения по
+// умолчанию ниже. API_URL оставлен константой.
+const fromEnv = (v) =>
+  (typeof v === "string" && v !== "" && !/^__[A-Z0-9_]+__$/.test(v)) ? v : undefined;
+
 const CONFIG = {
-  API_KEY:    "api-key",      // ← ваш API ключ
-  API_URL:    "https://ai.kth.pro/api/chat/completions",  // ← URL эндпоинта
-  // MODEL:      "Vision",                                   // ← модель
-  MODEL:      "Instruct",                                 // ← модель
-  MAX_TOKENS: 10000,
+  API_KEY:    fromEnv("__API_KEY__")    ?? "",             // ← переменная окружения
+  API_URL:    "https://ai.kth.pro/api/chat/completions",  // ← URL эндпоинта (константа)
+  MODEL:      fromEnv("__MODEL__")      ?? "Instruct",     // ← переменная окружения
+  MAX_TOKENS: Number(fromEnv("__MAX_TOKENS__")) || 10000, // ← переменная окружения
 };
 
 // ══════════════════════════════════════
