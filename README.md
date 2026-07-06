@@ -47,6 +47,37 @@ docker run -p 8080:8080 \
   <image>
 ```
 
+### Проверка в режиме, приближённом к продакшену (read-only rootfs)
+
+В k8s под запускается с `readOnlyRootFilesystem: true` и непривилегированным
+пользователем, а `emptyDir`-тома получают права на запись через `fsGroup:
+101`, заданный в `spec.template.spec.securityContext` (не в
+`containers[].securityContext` — там такого поля нет, Kubernetes его
+проигнорирует). Обычный `docker run` эту логику не воспроизводит: `fsGroup`
+— концепция Kubernetes, Docker про неё не знает, поэтому анонимные
+`--tmpfs`-тома по умолчанию непригодны для записи от имени непривилегированного
+пользователя. Чтобы протестировать локально то же самое, права нужно
+проставить явно опциями tmpfs-mount'а:
+
+```bash
+docker run -d --name eestimator-test \
+  -p 8080:8080 \
+  -e API_KEY='test-secret-123' \
+  -e MODEL='Instruct' \
+  -e MAX_TOKENS='5000' \
+  --user 101:101 \
+  --read-only \
+  --tmpfs /tmp:uid=101,gid=101,mode=0770 \
+  --tmpfs /var/cache/nginx:uid=101,gid=101,mode=0770 \
+  --tmpfs /usr/share/nginx/html:uid=101,gid=101,mode=0770 \
+  <image>
+```
+
+Если хотя бы один из томов смонтирован без `uid=101,gid=101,mode=...`,
+запись в него от имени непривилегированного пользователя завершится
+`Permission denied` — именно так проявляется отсутствие/неверное
+расположение `fsGroup` в чарте.
+
 ### Локально без сервера (открытие файла напрямую)
 
 При открытии `epic-estimator.html` напрямую в браузере (без nginx)
