@@ -1268,7 +1268,7 @@ body.result-mode #app { height: auto; min-height: 100vh; }
 // CONFIG
 // ══════════════════════════════════════
 // Значения подставляются из переменных окружения при развёртывании.
-// В k8s это делает docker-entrypoint.d/20-render-config.sh при старте
+// В k8s это делает docker-entrypoint.d/render-config.sh при старте
 // контейнера: копирует шаблон в writable html-volume и заменяет плейсхолдеры
 // __NAME__ на значения env-переменных пода (см. Dockerfile и
 // helm/eestimator/templates/deployment.yaml). При локальном запуске (Mac,
