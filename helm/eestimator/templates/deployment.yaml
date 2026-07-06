@@ -22,6 +22,8 @@ spec:
           emptyDir: {}
         - name: cache-volume
           emptyDir: {}
+        - name: html-volume
+          emptyDir: {}
       imagePullSecrets:
         - name: {{ .Values.application.image.pullSecret }}
       containers:
@@ -53,6 +55,9 @@ spec:
               readOnly: false
             - name: cache-volume
               mountPath: /var/cache/nginx
+              readOnly: false
+            - name: html-volume
+              mountPath: /usr/share/nginx/html
               readOnly: false
 #          livenessProbe:
 #            httpGet:
