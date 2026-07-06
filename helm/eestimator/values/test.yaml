@@ -1,0 +1,3 @@
+application:
+  ingress:
+    domain: dp-k8s-test.ftc.ru

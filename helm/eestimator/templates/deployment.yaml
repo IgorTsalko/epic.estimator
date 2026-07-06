@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.application.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  strategy:
+    {{- toYaml .Values.application.deploymentStrategy | nindent 4 }}
+  template:
+    metadata:
+      labels:
+        {{- include "labels" . | nindent 8 }}
+        exposed-by-ingress: {{ .Release.Name }}
+    spec:
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}
+        - name: cache-volume
+          emptyDir: {}
+      imagePullSecrets:
+        - name: {{ .Values.application.image.pullSecret }}
+      containers:
+        - name: {{ .Release.Name }}
+          image: "{{ .Values.application.image.repository }}:{{ .Chart.AppVersion | replace "+" "-" }}"
+          imagePullPolicy: {{ .Values.application.image.pullPolicy }}
+          resources:
+            {{- toYaml .Values.application.resources | nindent 12 }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.application.apiTokenSecret }}
+          securityContext:
+            runAsUser: 101
+            runAsGroup: 101
+            fsGroup: 101
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: {{ .Values.application.port }}
+              protocol: TCP
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+              readOnly: false
+            - name: cache-volume
+              mountPath: /var/cache/nginx
+              readOnly: false
+#          livenessProbe:
+#            httpGet:
+#              path: /healthz
+#              port: http
+#            initialDelaySeconds: 5
+#          readinessProbe:
+#            httpGet:
+#              path: /healthz
+#              port: http
+#            initialDelaySeconds: 5

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: eestimator
+description: eestimator
+version: 1.0.0
+appVersion: latest-28
+keywords:
+  - eestimator
+home: https://git.ftc.ru/tsalko/eestimator
+sources:
+  - https://git.ftc.ru/tsalko/eestimator

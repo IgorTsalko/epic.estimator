@@ -1,0 +1,31 @@
+application:
+  apiTokenSecret: "eestimator-api-token"
+  egress:
+    - ports:
+        - port: 80
+          protocol: TCP
+        - port: 443
+          protocol: TCP
+      to:
+        - ipBlock:
+            cidr: 192.168.144.169/32
+  image:
+    repository: git.ftc.ru:4567/tsalko/eestimator
+    pullPolicy: Always
+    pullSecret: regsecret
+  port: 8080
+  ingress:
+    domain: dp-k8s-uzb.kth.pro
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 100m
+      memory: 256Mi
+  deploymentStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  replicaCount: 1
