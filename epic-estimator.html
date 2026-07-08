@@ -2078,7 +2078,40 @@ document.addEventListener('DOMContentLoaded', () => {
       sendFree();
     }
   });
+  initGlobalScroll();
 });
+
+// Активная колонка контента уже, чем viewport, поэтому наведение на светлые
+// поля по бокам не попадает ни на один элемент с overflow-y:auto. Ловим
+// колесо на всём документе и прокручиваем нужный контейнер вручную,
+// если под курсором нет собственного скролл-контейнера (textarea, debug-лог и т.п).
+function initGlobalScroll() {
+  function findScrollableAncestor(el) {
+    while (el && el !== document.body) {
+      const style = getComputedStyle(el);
+      if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
+        return el;
+      }
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  function getScrollTarget() {
+    if (document.body.classList.contains('result-mode')) return document.body;
+    const activeScreen = document.querySelector('.screen.active');
+    if (!activeScreen) return null;
+    if (activeScreen.id === 'screen-chat') return document.getElementById('chat-area');
+    return activeScreen;
+  }
+
+  document.addEventListener('wheel', (e) => {
+    if (findScrollableAncestor(e.target)) return;
+    const target = getScrollTarget();
+    if (!target) return;
+    target.scrollTop += e.deltaY;
+  }, { passive: true });
+}
 
 function enableInput() {
   S.awaitingAdvance = false;
