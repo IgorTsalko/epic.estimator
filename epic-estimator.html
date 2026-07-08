@@ -1528,12 +1528,12 @@ const EXPRESS_SYSTEM = `Ты — инструмент экспресс-оцен�
 Шкала Фибоначчи: 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377
 
 Когда готов выносить итоговую оценку — заверши сообщение ТОЛЬКО этой меткой и больше ничего после неё:
-[EXPRESS_DONE:{"scores":[{"name":"Тип изменений","type":"base","sp":N,"reason":"..."},{"name":"Компонентный состав","type":"base","sp":N,"reason":"..."},{"name":"Интеграции","type":"base","sp":N,"reason":"..."},{"name":"Бизнес-логика","type":"base","sp":N,"reason":"..."},{"name":"Тестирование","type":"base","sp":N,"reason":"..."},{"name":"Риски и последствия ошибок","type":"extra","sp":N,"reason":"..."},{"name":"Коммуникации","type":"extra","sp":N,"reason":"..."}],"finalSP":N,"explanation":"..."}]
+[EXPRESS_DONE:{"scores":[{"name":"Тип изменений","type":"base","sp":N,"reason":"..."},{"name":"Компонентный состав","type":"base","sp":N,"reason":"..."},{"name":"Интеграции","type":"base","sp":N,"reason":"..."},{"name":"Бизнес-логика","type":"base","sp":N,"reason":"..."},{"name":"Тестирование","type":"base","sp":N,"reason":"..."},{"name":"Риски и последствия ошибок","type":"extra","sp":N,"reason":"..."},{"name":"Коммуникации","type":"extra","sp":N,"reason":"..."}]}]
 
-Требования к полям:
-— "reason": одно короткое предложение с фактами (что именно повлияло на оценку), без мета-фраз («описание указывает на», «соответствует критерию» и т.п.).
-— "explanation": одно предложение по алгоритму, только цифры. Пример: "Максимум базовых: 5 (Тип изменений), максимум доп.: 5 (Риски) — доп. не превышает базовый, итог 5 SP."
-— Никаких рассуждений и оговорок внутри JSON-полей.
+Требования к полю "reason":
+— Одно короткое предложение с фактами (что именно повлияло на оценку), без мета-фраз («описание указывает на», «соответствует критерию» и т.п.) и без рассуждений/сомнений/повторных пересчётов.
+— Строго запрещены двойные кавычки " внутри значения — если нужно процитировать или выделить слово, используй одинарные кавычки ' или вообще без кавычек.
+— Финальную оценку (итоговый SP) и алгоритм её расчёта в JSON не указывай — это считается отдельно, не пиши поле "finalSP" или "explanation".
 До вынесения оценки метку не добавляй.`;
 
 const FINAL_SYSTEM = `Ты должен оценить Эпик в стори поинтах. Эпик был предварительно оценен по каждому из 7-ми критериев. Руководствуясь правилами, дай финальную оценку эпику.
@@ -1920,7 +1920,7 @@ async function runExpressSession(epicText) {
       refreshInputState();
       await buildExpressResult(done);
     } else {
-      addMsg('ai', reply);
+      showExpressReply(reply);
       S.expressPhase = 'clarification';
       document.getElementById('express-phase-label').textContent = 'Нужны уточнения';
       refreshInputState();
@@ -1953,7 +1953,7 @@ async function sendExpressAnswer(text) {
       refreshInputState();
       await buildExpressResult(done);
     } else {
-      addMsg('ai', reply);
+      showExpressReply(reply);
       S.expressPhase = 'clarification';
       document.getElementById('express-phase-label').textContent = 'Нужны уточнения';
       refreshInputState();
@@ -1986,6 +1986,15 @@ function parseExpressDone(text) {
   }
   const jsonStr = text.slice(jsonStart, i + 1);
   try { return JSON.parse(jsonStr); } catch(_) { return null; }
+}
+
+function showExpressReply(text) {
+  if (text.indexOf('[EXPRESS_DONE:') !== -1) {
+    console.error('Express: не удалось разобрать EXPRESS_DONE JSON', text);
+    addMsg('ai', 'Не удалось разобрать ответ ассистента. Пожалуйста, повторите последнее сообщение.');
+    return;
+  }
+  addMsg('ai', text);
 }
 
 async function buildExpressResult(data) {
