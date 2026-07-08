@@ -17,10 +17,14 @@ spec:
         {{- include "labels" . | nindent 8 }}
         exposed-by-ingress: {{ .Release.Name }}
     spec:
+      securityContext:
+        fsGroup: 101
       volumes:
         - name: tmp-volume
           emptyDir: {}
         - name: cache-volume
+          emptyDir: {}
+        - name: html-volume
           emptyDir: {}
       imagePullSecrets:
         - name: {{ .Values.application.image.pullSecret }}
@@ -36,7 +40,6 @@ spec:
           securityContext:
             runAsUser: 101
             runAsGroup: 101
-            fsGroup: 101
             runAsNonRoot: true
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -53,6 +56,9 @@ spec:
               readOnly: false
             - name: cache-volume
               mountPath: /var/cache/nginx
+              readOnly: false
+            - name: html-volume
+              mountPath: /usr/share/nginx/html
               readOnly: false
 #          livenessProbe:
 #            httpGet:
