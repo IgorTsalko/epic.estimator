@@ -723,10 +723,6 @@ textarea#epic-input::placeholder { color: var(--ink3); }
 
 /* ══ SCREEN 3: RESULT ══ */
 #screen-result { padding-top: 24px; gap: 20px; }
-
-/* Экран чата использует фиксированный «app-shell»: шапка и поле ввода
-   закреплены, прокручивается только лента сообщений. Все остальные экраны
-   скроллят документ целиком, поэтому полоса прокрутки — у правого края окна. */
 body.chat-mode { overflow: hidden; }
 body.chat-mode #app { height: 100vh; }
 
