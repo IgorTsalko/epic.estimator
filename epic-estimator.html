@@ -47,7 +47,7 @@ html, body {
 }
 
 #app {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   max-width: 780px;
@@ -58,6 +58,10 @@ html, body {
 /* ── HEADER ── */
 .header {
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg);
   padding: 16px 0;
   display: flex;
   align-items: center;
@@ -110,7 +114,6 @@ html, body {
 #screen-start {
   padding: 36px 0 32px;
   gap: 28px;
-  overflow-y: auto;
 }
 
 .hero {
@@ -720,8 +723,8 @@ textarea#epic-input::placeholder { color: var(--ink3); }
 
 /* ══ SCREEN 3: RESULT ══ */
 #screen-result { padding-top: 24px; gap: 20px; }
-body.result-mode { overflow-y: auto; }
-body.result-mode #app { height: auto; min-height: 100vh; }
+body.chat-mode { overflow: hidden; }
+body.chat-mode #app { height: 100vh; }
 
 .result-score-card {
   background: var(--surface);
@@ -1707,6 +1710,7 @@ async function callClaude(messages, system) {
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  document.body.classList.toggle('chat-mode', id === 'screen-chat');
 }
 
 function setLoading(v) {
@@ -2009,7 +2013,6 @@ function showExpressReply(text) {
 async function buildExpressResult(data) {
   S.scores = data.scores || [];
   show('screen-result');
-  document.body.classList.add('result-mode');
 
   const finalSP     = calcFinalSP(S.scores);
   const explanation = buildExplanation(S.scores, finalSP);
@@ -2176,7 +2179,6 @@ function buildExplanation(scores, finalSP) {
 
 async function buildFinalResult() {
   show('screen-result');
-  document.body.classList.add('result-mode');
 
   const finalSP   = calcFinalSP(S.scores);
   const explanation = buildExplanation(S.scores, finalSP);
@@ -2298,7 +2300,6 @@ function resetAll() {
   S.history = []; S.scores = []; S.loading = false; S.awaitingAdvance = false;
   S.clarifying = false; S.currentBadge = null;
   S.expressPhase = null;
-  document.body.classList.remove('result-mode');
   document.getElementById('chat-area').innerHTML = '';
   document.getElementById('criteria-grid').innerHTML = '';
   document.getElementById('epic-input').value = '';
