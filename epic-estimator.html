@@ -921,6 +921,23 @@ body.chat-mode #app { height: 100vh; }
 }
 .summary-block.open .summary-body { display: block; }
 
+/* User input block */
+#user-input-body { white-space: normal; }
+.user-input-group + .user-input-group {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+.user-input-crit {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent2);
+  margin-bottom: 3px;
+}
+.user-input-text { white-space: pre-wrap; }
+
 /* loading overlay */
 #loading-overlay {
   display: none;
@@ -1249,6 +1266,15 @@ body.chat-mode #app { height: 100vh; }
       <div class="criteria-grid" id="criteria-grid"></div>
     </div>
 
+    <div class="summary-block" id="user-input-block">
+      <div class="summary-header" onclick="toggleUserInput()">
+        <span class="summary-toggle-label" id="user-input-label">Ваши ответы</span>
+        <button class="summary-copy-btn" id="user-input-copy-btn" onclick="copyUserInput(event)" title="Скопировать"></button>
+        <span class="summary-chevron">▼</span>
+      </div>
+      <div class="summary-body" id="user-input-body"></div>
+    </div>
+
     <div class="summary-block" id="summary-block">
       <div class="summary-header" onclick="toggleSummary()">
         <span class="summary-toggle-label">Итоговый отчёт</span>
@@ -1570,6 +1596,7 @@ const S = {
   currentIdx: 0,
   history: [],
   scores: [],
+  userInputs: [],
   loading: false,
   awaitingAdvance: false,
   clarifying: false,
@@ -1894,6 +1921,7 @@ async function startSession() {
     document.getElementById('error-start').style.display = 'none';
     S.scores = [];
     S.history = [];
+    S.userInputs = [];
     S.loading = false;
     S.awaitingAdvance = false;
     S.expressPhase = 'running';
@@ -1911,6 +1939,7 @@ async function startSession() {
   document.getElementById('error-start').style.display = 'none';
   S.currentIdx = 0;
   S.scores = [];
+  S.userInputs = [];
   S.awaitingAdvance = false;
   document.getElementById('progress-standard').style.display = '';
   document.getElementById('progress-express').style.display  = 'none';
@@ -1918,8 +1947,15 @@ async function startSession() {
   await openCriterion();
 }
 
+function recordUserInput(criterion, text) {
+  const last = S.userInputs.at(-1);
+  if (last && last.criterion === criterion) last.texts.push(text);
+  else S.userInputs.push({ criterion, texts: [text] });
+}
+
 async function runExpressSession(epicText) {
   addMsg('usr', epicText);
+  recordUserInput(null, epicText);
   S.history = [{ role: 'user', content: epicText }];
 
   setLoading(true);
@@ -1951,6 +1987,7 @@ async function sendExpressAnswer(text) {
   if (S.loading || S.expressPhase !== 'clarification' || !text.trim()) return;
   document.getElementById('free-input').value = '';
   addMsg('usr', text);
+  recordUserInput('Ответы на уточнения', text);
   S.history.push({ role: 'user', content: text });
   S.expressPhase = 'running';
   document.getElementById('express-phase-label').textContent = 'Анализ...';
@@ -2020,6 +2057,7 @@ async function buildExpressResult(data) {
   document.getElementById('res-sp').textContent          = finalSP;
   document.getElementById('res-explanation').textContent = explanation;
   renderCriteriaGrid();
+  renderUserInput();
   renderSummary(S.scores, finalSP);
 }
 
@@ -2042,6 +2080,7 @@ async function sendAnswer(text) {
   if (S.loading || S.awaitingAdvance || !text.trim()) return;
   document.getElementById('free-input').value = '';
   addMsg('usr', text);
+  recordUserInput(CRITERIA_PROMPTS[S.currentIdx].name, text);
   S.history.push({ role: 'user', content: text });
 
   setLoading(true);
@@ -2187,6 +2226,7 @@ async function buildFinalResult() {
   document.getElementById('res-explanation').textContent = explanation;
 
   renderCriteriaGrid();
+  renderUserInput();
   renderSummary(S.scores, finalSP);
 }
 
@@ -2245,6 +2285,36 @@ function toggleSummary() {
   document.getElementById('summary-block').classList.toggle('open');
 }
 
+function buildUserInputText() {
+  return S.userInputs.map(g => {
+    const body = g.texts.join('\n');
+    return g.criterion ? `${g.criterion}:\n${body}` : body;
+  }).join('\n\n');
+}
+
+function renderUserInput() {
+  const block = document.getElementById('user-input-block');
+  const hasInput = S.userInputs.length > 0;
+  block.style.display = hasInput ? '' : 'none';
+  if (!hasInput) return;
+
+  document.getElementById('user-input-label').textContent = S.expressMode
+    ? 'Ваше описание эпика' : 'Ваши ответы по критериям';
+  document.getElementById('user-input-body').innerHTML = S.userInputs.map(g => `
+    <div class="user-input-group">
+      ${g.criterion ? `<div class="user-input-crit">${escHtml(g.criterion)}</div>` : ''}
+      <div class="user-input-text">${escHtml(g.texts.join('\n'))}</div>
+    </div>`).join('');
+  block.classList.remove('open');
+  const btn = document.getElementById('user-input-copy-btn');
+  btn.classList.remove('copied');
+  btn.innerHTML = COPY_ICON;
+}
+
+function toggleUserInput() {
+  document.getElementById('user-input-block').classList.toggle('open');
+}
+
 function copyTextFallback(text) {
   const ta = document.createElement('textarea');
   ta.value = text;
@@ -2261,9 +2331,17 @@ function copyTextFallback(text) {
 }
 
 function copySummary(e) {
+  copyWithFeedback(e, document.getElementById('summary-body').textContent,
+    document.getElementById('summary-copy-btn'));
+}
+
+function copyUserInput(e) {
+  copyWithFeedback(e, buildUserInputText(),
+    document.getElementById('user-input-copy-btn'));
+}
+
+function copyWithFeedback(e, text, btn) {
   e.stopPropagation();
-  const text = document.getElementById('summary-body').textContent;
-  const btn = document.getElementById('summary-copy-btn');
 
   const showCopied = () => {
     btn.innerHTML = CHECK_ICON;
@@ -2278,7 +2356,7 @@ function copySummary(e) {
     if (copyTextFallback(text)) {
       showCopied();
     } else {
-      alert('Не удалось скопировать автоматически. Выделите текст сводки вручную и скопируйте его (Ctrl+C).');
+      alert('Не удалось скопировать автоматически. Выделите текст вручную и скопируйте его (Ctrl+C).');
     }
   };
 
@@ -2297,7 +2375,7 @@ function cancelAssessment() {
 
 function resetAll() {
   S.currentIdx = 0;
-  S.history = []; S.scores = []; S.loading = false; S.awaitingAdvance = false;
+  S.history = []; S.scores = []; S.userInputs = []; S.loading = false; S.awaitingAdvance = false;
   S.clarifying = false; S.currentBadge = null;
   S.expressPhase = null;
   document.getElementById('chat-area').innerHTML = '';
@@ -2309,6 +2387,7 @@ function resetAll() {
 }
 
 document.getElementById('summary-copy-btn').innerHTML = COPY_ICON;
+document.getElementById('user-input-copy-btn').innerHTML = COPY_ICON;
 
 document.getElementById('free-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); sendFree(); }
