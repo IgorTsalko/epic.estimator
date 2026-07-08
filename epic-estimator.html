@@ -2234,18 +2234,48 @@ function toggleSummary() {
   document.getElementById('summary-block').classList.toggle('open');
 }
 
+function copyTextFallback(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.top = '-1000px';
+  ta.style.left = '-1000px';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch(_) { ok = false; }
+  document.body.removeChild(ta);
+  return ok;
+}
+
 function copySummary(e) {
   e.stopPropagation();
   const text = document.getElementById('summary-body').textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById('summary-copy-btn');
+  const btn = document.getElementById('summary-copy-btn');
+
+  const showCopied = () => {
     btn.innerHTML = CHECK_ICON;
     btn.classList.add('copied');
     setTimeout(() => {
       btn.innerHTML = COPY_ICON;
       btn.classList.remove('copied');
     }, 2000);
-  });
+  };
+
+  const useFallback = () => {
+    if (copyTextFallback(text)) {
+      showCopied();
+    } else {
+      alert('Не удалось скопировать автоматически. Выделите текст сводки вручную и скопируйте его (Ctrl+C).');
+    }
+  };
+
+  if (window.isSecureContext && navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(showCopied, useFallback);
+  } else {
+    useFallback();
+  }
 }
 
 function cancelAssessment() {
