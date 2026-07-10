@@ -282,7 +282,7 @@ const CRITERIA = {
 
 const ALL_IDS = SECTIONS.flatMap(s => s.ids);
 const RATIO_CAP = 5;           // ограничение вклада одного критерия (× вес)
-const STORAGE_KEY = "employee-rating-v2";
+const STORAGE_KEY = "employee-rating-v3";
 
 /* Тестовый сотрудник с заполненными значениями (для наглядности расчёта). */
 const SAMPLE_VALUES = {
@@ -298,8 +298,8 @@ function defaultState() {
     norms: Object.fromEntries(ALL_IDS.map(id => [id, CRITERIA[id].norm])),
     coefs: Object.fromEntries(ALL_IDS.map(id => [id, CRITERIA[id].coef])),
     employees: [
-      { name: "Иванов И. И.", values: {} },
-      { name: "Петров П. П. (тест)", values: { ...SAMPLE_VALUES } }
+      { name: "Петров П. П. (тест)", values: { ...SAMPLE_VALUES } },
+      { name: "", values: {} }
     ]
   };
 }
