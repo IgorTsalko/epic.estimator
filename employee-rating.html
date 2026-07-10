@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Рейтинг эффективности сотрудника</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --text: #1c2333;
+    --muted: #6b7280;
+    --border: #e2e5ea;
+    --accent: #3b5bdb;
+    --accent-soft: #eef1fb;
+    --good: #2f9e44;
+    --bad: #d9480f;
+    --section: #f1f3f7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); margin: 0 0 20px; max-width: 900px; line-height: 1.5; }
+
+  .toolbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  button {
+    font: inherit;
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card);
+    color: var(--text);
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { opacity: .9; color: #fff; }
+
+  .table-wrap {
+    overflow-x: auto;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  table { border-collapse: collapse; width: 100%; min-width: 900px; }
+  th, td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  th { background: var(--accent-soft); font-weight: 600; position: sticky; top: 0; }
+  td.criterion { white-space: normal; min-width: 260px; max-width: 340px; }
+  .crit-name { font-weight: 500; }
+  .crit-name .hint {
+    display: inline-block;
+    margin-left: 6px;
+    width: 16px; height: 16px;
+    line-height: 16px;
+    text-align: center;
+    border-radius: 50%;
+    background: var(--section);
+    color: var(--muted);
+    font-size: 11px;
+    cursor: help;
+  }
+  .dir-up { color: var(--good); font-weight: 600; }
+  .dir-down { color: var(--bad); font-weight: 600; }
+
+  tr.section-row td {
+    background: var(--section);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--muted);
+  }
+
+  input[type="number"], input[type="text"] {
+    font: inherit;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+    color: var(--text);
+    width: 80px;
+  }
+  input[type="text"] { width: 140px; font-weight: 600; }
+  input:focus { outline: none; border-color: var(--accent); }
+  input.norm, input.coef { width: 64px; }
+
+  .weight-cell { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .score {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .derived-value {
+    display: inline-block;
+    min-width: 60px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+  }
+
+  tr.total-row td {
+    background: var(--accent-soft);
+    font-weight: 700;
+    font-size: 16px;
+    border-bottom: none;
+  }
+  .total-value { color: var(--accent); font-size: 20px; font-variant-numeric: tabular-nums; }
+
+  .emp-head { display: flex; align-items: center; gap: 6px; }
+  .emp-remove {
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .emp-remove:hover { color: var(--bad); border-color: var(--bad); }
+
+  .legend {
+    margin-top: 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    max-width: 900px;
+    line-height: 1.6;
+  }
+  .legend h2 { font-size: 15px; margin: 0 0 8px; }
+  .legend p, .legend li { color: var(--muted); margin: 4px 0; }
+  .legend code {
+    background: var(--section);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--text);
+  }
+</style>
+</head>
+<body>
+
+<h1>Рейтинг эффективности сотрудника</h1>
+<p class="subtitle">
+  Значения по каждому критерию вводятся вручную за отчётный период. Итоговый рейтинг — единое
+  накопительное число (минимум 0, без верхней границы): если сотрудник по всем критериям ровно
+  «в норме», рейтинг равен 100; всё, что лучше нормы, добавляет баллы, хуже — отнимает свою долю.
+</p>
+
+<div class="toolbar">
+  <button class="primary" id="add-emp">+ Добавить сотрудника</button>
+  <button id="reset">Сбросить всё к значениям по умолчанию</button>
+</div>
+
+<div class="table-wrap">
+  <table id="rating-table">
+    <thead><tr id="head-row"></tr></thead>
+    <tbody id="body"></tbody>
+  </table>
+</div>
+
+<div class="legend">
+  <h2>Как считается итоговый рейтинг</h2>
+  <p>1. У каждого критерия есть <b>коэффициент</b> — его значимость относительно других.
+     Общий вес всех критериев равен 100 и делится между ними пропорционально коэффициентам:
+     <code>вес = коэффициент / сумма коэффициентов × 100</code>.
+     Поэтому при добавлении нового критерия достаточно задать ему коэффициент —
+     веса остальных пересчитаются автоматически.</p>
+  <p>2. Значение критерия сравнивается с <b>нормой</b> (ожидаемым значением за период):</p>
+  <ul>
+    <li>для критериев «больше — лучше» (<span class="dir-up">&#8593;</span>): <code>балл = вес × значение / норма</code></li>
+    <li>для критериев «меньше — лучше» (<span class="dir-down">&#8595;</span>): <code>балл = вес × норма / значение</code></li>
+  </ul>
+  <p>3. <b>Производные критерии</b> считаются автоматически как отношение базовых
+     (например, качество MR = смерженные MR / комментарии к его MR: чем меньше правок
+     потребовалось, тем выше качество) и участвуют в рейтинге со своим весом наравне с базовыми.</p>
+  <p>4. <b>Итог = сумма баллов по всем критериям.</b> Вклад одного критерия ограничен
+     пятикратным весом (чтобы один аномальный показатель не перекрывал все остальные),
+     сам итог сверху не ограничен. Пустое значение даёт 0 баллов по критерию.</p>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- Конфигурация критериев ---------- */
+/* dir: "up" — больше лучше, "down" — меньше лучше.
+   norm — ожидаемое значение за период, coef — значимость критерия.
+   derived: значение считается автоматически как num / den (знаменатель < 1 берётся как 1). */
+const SECTIONS = [
+  { title: "Jira", ids: ["jira_tasks", "dev_time", "qa_time", "ct"] },
+  { title: "Merge Request (как автор)", ids: ["mr_merged", "mr_lifetime", "mr_comments", "review_iterations", "fix_time"] },
+  { title: "Ревью (как ревьюер)", ids: ["approves_given", "approve_quality", "reviewer_reaction", "reviewer_comments", "reviewer_assigned"] },
+  { title: "Производные критерии (считаются автоматически)", ids: ["mr_quality", "delivery_speed", "review_engagement"] }
+];
+
+const CRITERIA = {
+  jira_tasks: {
+    name: "Задач в Jira", unit: "шт", dir: "up", norm: 10, coef: 1,
+    full: "Количество задач Jira, выполненных за период"
+  },
+  dev_time: {
+    name: "Время в разработке", unit: "ч", dir: "down", norm: 16, coef: 1,
+    full: "Среднее время задачи в статусе разработки (Jira)"
+  },
+  qa_time: {
+    name: "Время в тестировании", unit: "ч", dir: "down", norm: 8, coef: 0.5,
+    full: "Среднее время задачи в статусе тестирования (Jira)"
+  },
+  ct: {
+    name: "Cycle Time задачи", unit: "дн", dir: "down", norm: 5, coef: 1.5,
+    full: "Среднее время задачи от взятия в работу до завершения"
+  },
+  mr_merged: {
+    name: "Смержено MR", unit: "шт", dir: "up", norm: 10, coef: 1.5,
+    full: "Количество смерженных merge request-ов за период"
+  },
+  mr_lifetime: {
+    name: "Время жизни MR", unit: "ч", dir: "down", norm: 24, coef: 1,
+    full: "Среднее время MR от создания (или перевода из драфта) до мерджа"
+  },
+  mr_comments: {
+    name: "Комментариев к его MR", unit: "шт", dir: "down", norm: 20, coef: 1,
+    full: "Количество комментариев, оставленных ревьюерами на MR-ах оцениваемого"
+  },
+  review_iterations: {
+    name: "Итераций ревью его MR", unit: "шт", dir: "down", norm: 2, coef: 1,
+    full: "Среднее число циклов «комментарии → коммит с правками» на один MR оцениваемого"
+  },
+  fix_time: {
+    name: "Время исправления по комментарию", unit: "ч", dir: "down", norm: 8, coef: 1,
+    full: "Среднее время от комментария в MR оцениваемого до правки (реакция + реализация)"
+  },
+  approves_given: {
+    name: "Поставил апрувов", unit: "шт", dir: "up", norm: 10, coef: 0.5,
+    full: "Количество апрувов, которые оцениваемый поставил чужим MR-ам"
+  },
+  approve_quality: {
+    name: "Качество апрувов", unit: "%", dir: "up", norm: 80, coef: 1,
+    full: "Доля апрувов, после которых другим ревьюерам не пришлось оставлять комментарии (апрув не был поспешным)"
+  },
+  reviewer_reaction: {
+    name: "Реакция как ревьюера", unit: "ч", dir: "down", norm: 4, coef: 1,
+    full: "Среднее время от назначения оцениваемого ревьюером до его первого комментария"
+  },
+  reviewer_comments: {
+    name: "Комментариев как ревьюер", unit: "шт", dir: "up", norm: 20, coef: 0.5,
+    full: "Сколько комментариев оцениваемый оставил в чужих MR-ах как ревьюер"
+  },
+  reviewer_assigned: {
+    name: "Назначений ревьюером", unit: "шт", dir: "up", norm: 10, coef: 0.5,
+    full: "Сколько раз оцениваемого назначали ревьюером"
+  },
+
+  /* производные */
+  mr_quality: {
+    name: "Качество MR", unit: "MR/коммент", dir: "up", norm: 0.5, coef: 2,
+    derived: { num: "mr_merged", den: "mr_comments" },
+    full: "Смержено MR ÷ комментариев к его MR. Чем меньше комментариев потребовалось на смерженный MR, тем выше качество кода"
+  },
+  delivery_speed: {
+    name: "Скорость поставки", unit: "задач/дн", dir: "up", norm: 2, coef: 1.5,
+    derived: { num: "jira_tasks", den: "ct" },
+    full: "Задач в Jira ÷ Cycle Time. Сколько задач сотрудник доводит до конца в пересчёте на день цикла"
+  },
+  review_engagement: {
+    name: "Вовлечённость в ревью", unit: "коммент/назнач", dir: "up", norm: 2, coef: 1,
+    derived: { num: "reviewer_comments", den: "reviewer_assigned" },
+    full: "Комментариев как ревьюер ÷ назначений ревьюером. Насколько содержательно сотрудник ревьюит, когда его назначают"
+  }
+};
+
+const ALL_IDS = SECTIONS.flatMap(s => s.ids);
+const RATIO_CAP = 5;           // ограничение вклада одного критерия (× вес)
+const STORAGE_KEY = "employee-rating-v1";
+
+/* ---------- Состояние ---------- */
+function defaultState() {
+  return {
+    norms: Object.fromEntries(ALL_IDS.map(id => [id, CRITERIA[id].norm])),
+    coefs: Object.fromEntries(ALL_IDS.map(id => [id, CRITERIA[id].coef])),
+    employees: [{ name: "Иванов И. И.", values: {} }]
+  };
+}
+
+let state = loadState();
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaultState();
+    const parsed = JSON.parse(raw);
+    const base = defaultState();
+    return {
+      norms: { ...base.norms, ...(parsed.norms || {}) },
+      coefs: { ...base.coefs, ...(parsed.coefs || {}) },
+      employees: Array.isArray(parsed.employees) && parsed.employees.length
+        ? parsed.employees
+        : base.employees
+    };
+  } catch (e) {
+    return defaultState();
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+/* ---------- Расчёты ---------- */
+function totalCoef() {
+  return ALL_IDS.reduce((sum, id) => sum + (Number(state.coefs[id]) || 0), 0);
+}
+
+function weightOf(id) {
+  const sum = totalCoef();
+  if (sum <= 0) return 0;
+  return (Number(state.coefs[id]) || 0) / sum * 100;
+}
+
+/* Значение критерия для сотрудника: введённое вручную или производное. */
+function valueOf(empIndex, id) {
+  const crit = CRITERIA[id];
+  const emp = state.employees[empIndex];
+  if (!crit.derived) {
+    const v = emp.values[id];
+    return (v === "" || v === undefined || v === null) ? null : Number(v);
+  }
+  const num = valueOf(empIndex, crit.derived.num);
+  const den = valueOf(empIndex, crit.derived.den);
+  if (num === null || den === null) return null;
+  return num / Math.max(den, 1);
+}
+
+/* Баллы по критерию: вес × (значение/норма) или вес × (норма/значение), с потолком RATIO_CAP. */
+function scoreOf(empIndex, id) {
+  const value = valueOf(empIndex, id);
+  const norm = Number(state.norms[id]);
+  if (value === null || isNaN(value) || !(norm > 0)) return 0;
+  let ratio;
+  if (CRITERIA[id].dir === "up") {
+    ratio = value <= 0 ? 0 : value / norm;
+  } else {
+    ratio = value <= 0 ? RATIO_CAP : norm / value; // 0 часов/комментариев — идеал, даём максимум
+  }
+  ratio = Math.min(ratio, RATIO_CAP);
+  return weightOf(id) * ratio;
+}
+
+function totalScore(empIndex) {
+  const total = ALL_IDS.reduce((sum, id) => sum + scoreOf(empIndex, id), 0);
+  return Math.max(total, 0);
+}
+
+/* ---------- Отрисовка ---------- */
+const headRow = document.getElementById("head-row");
+const body = document.getElementById("body");
+
+function fmt(n, digits) {
+  return Number(n).toLocaleString("ru-RU", {
+    minimumFractionDigits: digits, maximumFractionDigits: digits
+  });
+}
+
+function render() {
+  const emps = state.employees;
+
+  /* Шапка */
+  headRow.innerHTML = "";
+  headRow.insertAdjacentHTML("beforeend",
+    "<th>Критерий</th><th>Ед.</th><th title='Направление: больше или меньше — лучше'>Лучше</th>" +
+    "<th title='Ожидаемое значение за период'>Норма</th>" +
+    "<th title='Значимость критерия относительно других'>Коэф.</th>" +
+    "<th title='Доля из общих 100, по коэффициенту'>Вес, %</th>");
+  emps.forEach((emp, i) => {
+    const th = document.createElement("th");
+    const wrap = document.createElement("div");
+    wrap.className = "emp-head";
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.value = emp.name;
+    nameInput.placeholder = "ФИО";
+    nameInput.title = "ФИО оцениваемого";
+    nameInput.addEventListener("input", () => { emp.name = nameInput.value; saveState(); });
+    wrap.appendChild(nameInput);
+    if (emps.length > 1) {
+      const rm = document.createElement("button");
+      rm.className = "emp-remove";
+      rm.textContent = "×";
+      rm.title = "Удалить сотрудника";
+      rm.addEventListener("click", () => { state.employees.splice(i, 1); saveState(); render(); });
+      wrap.appendChild(rm);
+    }
+    th.appendChild(wrap);
+    headRow.appendChild(th);
+  });
+
+  /* Тело */
+  body.innerHTML = "";
+  SECTIONS.forEach(section => {
+    const secTr = document.createElement("tr");
+    secTr.className = "section-row";
+    secTr.innerHTML = `<td colspan="${6 + emps.length}">${section.title}</td>`;
+    body.appendChild(secTr);
+
+    section.ids.forEach(id => {
+      const crit = CRITERIA[id];
+      const tr = document.createElement("tr");
+
+      const nameTd = document.createElement("td");
+      nameTd.className = "criterion";
+      nameTd.innerHTML = `<span class="crit-name">${crit.name}<span class="hint" title="${crit.full}">?</span></span>`;
+      tr.appendChild(nameTd);
+
+      const unitTd = document.createElement("td");
+      unitTd.textContent = crit.unit;
+      unitTd.style.color = "var(--muted)";
+      tr.appendChild(unitTd);
+
+      const dirTd = document.createElement("td");
+      dirTd.innerHTML = crit.dir === "up"
+        ? '<span class="dir-up" title="Больше — лучше">&#8593;</span>'
+        : '<span class="dir-down" title="Меньше — лучше">&#8595;</span>';
+      tr.appendChild(dirTd);
+
+      const normTd = document.createElement("td");
+      const normInput = document.createElement("input");
+      normInput.type = "number";
+      normInput.className = "norm";
+      normInput.min = "0";
+      normInput.step = "any";
+      normInput.value = state.norms[id];
+      normInput.addEventListener("input", () => {
+        state.norms[id] = normInput.value === "" ? 0 : Number(normInput.value);
+        saveState(); recalc();
+      });
+      normTd.appendChild(normInput);
+      tr.appendChild(normTd);
+
+      const coefTd = document.createElement("td");
+      const coefInput = document.createElement("input");
+      coefInput.type = "number";
+      coefInput.className = "coef";
+      coefInput.min = "0";
+      coefInput.step = "0.1";
+      coefInput.value = state.coefs[id];
+      coefInput.addEventListener("input", () => {
+        state.coefs[id] = coefInput.value === "" ? 0 : Number(coefInput.value);
+        saveState(); recalc();
+      });
+      coefTd.appendChild(coefInput);
+      tr.appendChild(coefTd);
+
+      const weightTd = document.createElement("td");
+      weightTd.className = "weight-cell";
+      weightTd.dataset.weightFor = id;
+      tr.appendChild(weightTd);
+
+      emps.forEach((emp, i) => {
+        const td = document.createElement("td");
+        if (crit.derived) {
+          const span = document.createElement("span");
+          span.className = "derived-value";
+          span.dataset.derived = `${i}:${id}`;
+          td.appendChild(span);
+        } else {
+          const input = document.createElement("input");
+          input.type = "number";
+          input.min = "0";
+          input.step = "any";
+          input.placeholder = "—";
+          const v = emp.values[id];
+          input.value = (v === undefined || v === null) ? "" : v;
+          input.addEventListener("input", () => {
+            emp.values[id] = input.value === "" ? "" : Number(input.value);
+            saveState(); recalc();
+          });
+          td.appendChild(input);
+        }
+        const score = document.createElement("span");
+        score.className = "score";
+        score.dataset.score = `${i}:${id}`;
+        td.appendChild(score);
+        tr.appendChild(td);
+      });
+
+      body.appendChild(tr);
+    });
+  });
+
+  /* Итог */
+  const totalTr = document.createElement("tr");
+  totalTr.className = "total-row";
+  totalTr.innerHTML = "<td colspan='6'>ИТОГОВЫЙ РЕЙТИНГ (сумма баллов, норма = 100)</td>";
+  emps.forEach((_, i) => {
+    const td = document.createElement("td");
+    td.innerHTML = `<span class="total-value" data-total="${i}"></span>`;
+    totalTr.appendChild(td);
+  });
+  body.appendChild(totalTr);
+
+  recalc();
+}
+
+/* Пересчёт вычисляемых ячеек без перестройки DOM (чтобы не терять фокус ввода). */
+function recalc() {
+  ALL_IDS.forEach(id => {
+    const cell = body.querySelector(`[data-weight-for="${id}"]`);
+    if (cell) cell.textContent = fmt(weightOf(id), 1);
+  });
+
+  state.employees.forEach((_, i) => {
+    ALL_IDS.forEach(id => {
+      if (CRITERIA[id].derived) {
+        const span = body.querySelector(`[data-derived="${i}:${id}"]`);
+        if (span) {
+          const v = valueOf(i, id);
+          span.textContent = v === null ? "—" : fmt(v, 2);
+        }
+      }
+      const scoreEl = body.querySelector(`[data-score="${i}:${id}"]`);
+      if (scoreEl) {
+        const v = valueOf(i, id);
+        scoreEl.textContent = v === null ? "нет данных" : fmt(scoreOf(i, id), 1) + " балл.";
+      }
+    });
+    const totalEl = body.querySelector(`[data-total="${i}"]`);
+    if (totalEl) totalEl.textContent = fmt(totalScore(i), 1);
+  });
+}
+
+/* ---------- Кнопки ---------- */
+document.getElementById("add-emp").addEventListener("click", () => {
+  state.employees.push({ name: "", values: {} });
+  saveState();
+  render();
+});
+
+document.getElementById("reset").addEventListener("click", () => {
+  if (!confirm("Сбросить все значения, нормы и коэффициенты к значениям по умолчанию?")) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = defaultState();
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
