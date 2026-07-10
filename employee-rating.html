@@ -72,6 +72,33 @@
     font-size: 11px;
     cursor: help;
   }
+  .crit-name .hint:hover { background: var(--accent); color: #fff; }
+  [data-tip] { cursor: help; }
+
+  /* Собственный тултип (нативный title показывается ненадёжно) */
+  #tooltip {
+    position: fixed;
+    z-index: 1000;
+    max-width: 320px;
+    padding: 8px 11px;
+    background: #1c2333;
+    color: #f6f7f9;
+    font-size: 12.5px;
+    line-height: 1.45;
+    border-radius: 8px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.25);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity .12s ease, transform .12s ease;
+  }
+  #tooltip.show { opacity: 1; transform: translateY(0); }
+  #tooltip .tip-unit {
+    display: block;
+    margin-top: 5px;
+    color: #aeb6c7;
+    font-size: 11.5px;
+  }
   .dir-up { color: var(--good); font-weight: 600; }
   .dir-down { color: var(--bad); font-weight: 600; }
 
@@ -206,43 +233,43 @@ const SECTIONS = [
 
 const CRITERIA = {
   jira_tasks: {
-    name: "Задач в Jira", unit: "шт", dir: "up", norm: 10, coef: 1,
+    name: "Задач в Jira", unit: "штук", dir: "up", norm: 10, coef: 1,
     full: "Количество задач Jira, выполненных за период"
   },
   dev_time: {
-    name: "Время в разработке", unit: "ч", dir: "down", norm: 16, coef: 1,
+    name: "Время в разработке", unit: "часы", dir: "down", norm: 16, coef: 1,
     full: "Среднее время задачи в статусе разработки (Jira)"
   },
   qa_time: {
-    name: "Время в тестировании", unit: "ч", dir: "down", norm: 8, coef: 0.5,
+    name: "Время в тестировании", unit: "часы", dir: "down", norm: 8, coef: 0.5,
     full: "Среднее время задачи в статусе тестирования (Jira)"
   },
   ct: {
-    name: "Cycle Time задачи", unit: "дн", dir: "down", norm: 5, coef: 1.5,
+    name: "Cycle Time задачи", unit: "дни", dir: "down", norm: 5, coef: 1.5,
     full: "Среднее время задачи от взятия в работу до завершения"
   },
   mr_merged: {
-    name: "Смержено MR", unit: "шт", dir: "up", norm: 10, coef: 1.5,
+    name: "Смержено MR", unit: "штук", dir: "up", norm: 10, coef: 1.5,
     full: "Количество смерженных merge request-ов за период"
   },
   mr_lifetime: {
-    name: "Время жизни MR", unit: "ч", dir: "down", norm: 24, coef: 1,
+    name: "Время жизни MR", unit: "часы", dir: "down", norm: 24, coef: 1,
     full: "Среднее время MR от создания (или перевода из драфта) до мерджа"
   },
   mr_comments: {
-    name: "Комментариев к его MR", unit: "шт", dir: "down", norm: 20, coef: 1,
+    name: "Комментариев к его MR", unit: "штук", dir: "down", norm: 20, coef: 1,
     full: "Количество комментариев, оставленных ревьюерами на MR-ах оцениваемого"
   },
   review_iterations: {
-    name: "Итераций ревью его MR", unit: "шт", dir: "down", norm: 2, coef: 1,
+    name: "Итераций ревью его MR", unit: "циклов", dir: "down", norm: 2, coef: 1,
     full: "Среднее число циклов «комментарии → коммит с правками» на один MR оцениваемого"
   },
   fix_time: {
-    name: "Время исправления по комментарию", unit: "ч", dir: "down", norm: 8, coef: 1,
+    name: "Время исправления по комментарию", unit: "часы", dir: "down", norm: 8, coef: 1,
     full: "Среднее время от комментария в MR оцениваемого до правки (реакция + реализация)"
   },
   approves_given: {
-    name: "Поставил апрувов", unit: "шт", dir: "up", norm: 10, coef: 0.5,
+    name: "Поставил апрувов", unit: "штук", dir: "up", norm: 10, coef: 0.5,
     full: "Количество апрувов, которые оцениваемый поставил чужим MR-ам"
   },
   approve_quality: {
@@ -250,31 +277,31 @@ const CRITERIA = {
     full: "Доля апрувов, после которых другим ревьюерам не пришлось оставлять комментарии (апрув не был поспешным)"
   },
   reviewer_reaction: {
-    name: "Реакция как ревьюера", unit: "ч", dir: "down", norm: 4, coef: 1,
+    name: "Реакция как ревьюера", unit: "часы", dir: "down", norm: 4, coef: 1,
     full: "Среднее время от назначения оцениваемого ревьюером до его первого комментария"
   },
   reviewer_comments: {
-    name: "Комментариев как ревьюер", unit: "шт", dir: "up", norm: 20, coef: 0.5,
+    name: "Комментариев как ревьюер", unit: "штук", dir: "up", norm: 20, coef: 0.5,
     full: "Сколько комментариев оцениваемый оставил в чужих MR-ах как ревьюер"
   },
   reviewer_assigned: {
-    name: "Назначений ревьюером", unit: "шт", dir: "up", norm: 10, coef: 0.5,
+    name: "Назначений ревьюером", unit: "штук", dir: "up", norm: 10, coef: 0.5,
     full: "Сколько раз оцениваемого назначали ревьюером"
   },
 
   /* производные */
   mr_quality: {
-    name: "Качество MR", unit: "MR/коммент", dir: "up", norm: 0.5, coef: 2,
+    name: "Качество MR", unit: "MR / коммент.", dir: "up", norm: 0.5, coef: 2,
     derived: { num: "mr_merged", den: "mr_comments" },
     full: "Смержено MR ÷ комментариев к его MR. Чем меньше комментариев потребовалось на смерженный MR, тем выше качество кода"
   },
   delivery_speed: {
-    name: "Скорость поставки", unit: "задач/дн", dir: "up", norm: 2, coef: 1.5,
+    name: "Скорость поставки", unit: "задач / день", dir: "up", norm: 2, coef: 1.5,
     derived: { num: "jira_tasks", den: "ct" },
     full: "Задач в Jira ÷ Cycle Time. Сколько задач сотрудник доводит до конца в пересчёте на день цикла"
   },
   review_engagement: {
-    name: "Вовлечённость в ревью", unit: "коммент/назнач", dir: "up", norm: 2, coef: 1,
+    name: "Вовлечённость в ревью", unit: "коммент. / назнач.", dir: "up", norm: 2, coef: 1,
     derived: { num: "reviewer_comments", den: "reviewer_assigned" },
     full: "Комментариев как ревьюер ÷ назначений ревьюером. Насколько содержательно сотрудник ревьюит, когда его назначают"
   }
@@ -389,10 +416,11 @@ function render() {
   /* Шапка */
   headRow.innerHTML = "";
   headRow.insertAdjacentHTML("beforeend",
-    "<th>Критерий</th><th>Ед.</th><th title='Направление: больше или меньше — лучше'>Лучше</th>" +
-    "<th title='Ожидаемое значение за период'>Норма</th>" +
-    "<th title='Значимость критерия относительно других'>Коэф.</th>" +
-    "<th title='Доля из общих 100, по коэффициенту'>Вес, %</th>");
+    "<th>Критерий</th><th data-tip='Единица измерения показателя'>Ед.</th>" +
+    "<th data-tip='Направление: больше или меньше значение — лучше'>Лучше</th>" +
+    "<th data-tip='Ожидаемое (эталонное) значение показателя за период'>Норма</th>" +
+    "<th data-tip='Значимость критерия относительно других'>Коэф.</th>" +
+    "<th data-tip='Доля критерия из общих 100, распределяется по коэффициенту'>Вес, %</th>");
   emps.forEach((emp, i) => {
     const th = document.createElement("th");
     const wrap = document.createElement("div");
@@ -430,7 +458,16 @@ function render() {
 
       const nameTd = document.createElement("td");
       nameTd.className = "criterion";
-      nameTd.innerHTML = `<span class="crit-name">${crit.name}<span class="hint" title="${crit.full}">?</span></span>`;
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "crit-name";
+      nameSpan.textContent = crit.name;
+      const hint = document.createElement("span");
+      hint.className = "hint";
+      hint.textContent = "?";
+      hint.dataset.tip = crit.full;
+      hint.dataset.unit = "Единица измерения: " + crit.unit;
+      nameSpan.appendChild(hint);
+      nameTd.appendChild(nameSpan);
       tr.appendChild(nameTd);
 
       const unitTd = document.createElement("td");
@@ -440,8 +477,8 @@ function render() {
 
       const dirTd = document.createElement("td");
       dirTd.innerHTML = crit.dir === "up"
-        ? '<span class="dir-up" title="Больше — лучше">&#8593;</span>'
-        : '<span class="dir-down" title="Меньше — лучше">&#8595;</span>';
+        ? '<span class="dir-up" data-tip="Больше — лучше: чем выше значение, тем больше баллов">&#8593;</span>'
+        : '<span class="dir-down" data-tip="Меньше — лучше: чем ниже значение, тем больше баллов">&#8595;</span>';
       tr.appendChild(dirTd);
 
       const normTd = document.createElement("td");
@@ -549,6 +586,49 @@ function recalc() {
     if (totalEl) totalEl.textContent = fmt(totalScore(i), 1);
   });
 }
+
+/* ---------- Тултип (надёжная замена нативному title) ---------- */
+const tooltip = document.createElement("div");
+tooltip.id = "tooltip";
+document.body.appendChild(tooltip);
+
+function showTip(el) {
+  const tip = el.dataset.tip;
+  if (!tip) return;
+  tooltip.textContent = tip;
+  if (el.dataset.unit) {
+    const u = document.createElement("span");
+    u.className = "tip-unit";
+    u.textContent = el.dataset.unit;
+    tooltip.appendChild(u);
+  }
+  const r = el.getBoundingClientRect();
+  tooltip.classList.add("show");
+  const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+  let left = r.left + r.width / 2 - tw / 2;
+  left = Math.max(8, Math.min(left, window.innerWidth - tw - 8));
+  let top = r.top - th - 8;
+  if (top < 8) top = r.bottom + 8; // не хватает места сверху — показываем снизу
+  tooltip.style.left = left + "px";
+  tooltip.style.top = top + "px";
+}
+
+function hideTip() {
+  tooltip.classList.remove("show");
+}
+
+document.addEventListener("mouseover", e => {
+  const el = e.target.closest("[data-tip]");
+  if (el) showTip(el);
+});
+document.addEventListener("mouseout", e => {
+  if (e.target.closest("[data-tip]")) hideTip();
+});
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-tip]"); // для тач-устройств
+  if (el) { tooltip.classList.contains("show") ? hideTip() : showTip(el); }
+  else hideTip();
+});
 
 /* ---------- Кнопки ---------- */
 document.getElementById("add-emp").addEventListener("click", () => {
