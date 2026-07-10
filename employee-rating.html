@@ -58,7 +58,12 @@
     white-space: nowrap;
   }
   th { background: var(--accent-soft); font-weight: 600; position: sticky; top: 0; }
-  td.criterion { white-space: normal; min-width: 260px; max-width: 340px; }
+  td.criterion { white-space: normal; min-width: 220px; max-width: 280px; }
+
+  /* Служебные колонки (ед., направление, норма, коэф., вес) — компактно, прижаты влево */
+  th.meta, td.meta { width: 1%; padding-left: 8px; padding-right: 8px; }
+  /* Колонки сотрудников забирают всё оставшееся место */
+  th.emp-col, td.emp-col { min-width: 150px; }
   .crit-name { font-weight: 500; }
   .crit-name .hint {
     display: inline-block;
@@ -120,9 +125,10 @@
     color: var(--text);
     width: 80px;
   }
-  input[type="text"] { width: 140px; font-weight: 600; }
+  input[type="text"] { width: 100%; font-weight: 600; }
   input:focus { outline: none; border-color: var(--accent); }
-  input.norm, input.coef { width: 64px; }
+  input.norm, input.coef { width: 56px; }
+  input.val { width: 120px; }
 
   .weight-cell { color: var(--muted); font-variant-numeric: tabular-nums; }
   .score {
@@ -148,7 +154,9 @@
   .total-value { color: var(--accent); font-size: 20px; font-variant-numeric: tabular-nums; }
 
   .emp-head { display: flex; align-items: center; gap: 6px; }
+  .emp-head input[type="text"] { flex: 1; min-width: 0; }
   .emp-remove {
+    flex: none;
     padding: 2px 7px;
     border-radius: 6px;
     font-size: 12px;
@@ -416,13 +424,14 @@ function render() {
   /* Шапка */
   headRow.innerHTML = "";
   headRow.insertAdjacentHTML("beforeend",
-    "<th>Критерий</th><th data-tip='Единица измерения показателя'>Ед.</th>" +
-    "<th data-tip='Направление: больше или меньше значение — лучше'>Лучше</th>" +
-    "<th data-tip='Ожидаемое (эталонное) значение показателя за период'>Норма</th>" +
-    "<th data-tip='Значимость критерия относительно других'>Коэф.</th>" +
-    "<th data-tip='Доля критерия из общих 100, распределяется по коэффициенту'>Вес, %</th>");
+    "<th>Критерий</th><th class='meta' data-tip='Единица измерения показателя'>Ед.</th>" +
+    "<th class='meta' data-tip='Направление: больше или меньше значение — лучше'>Лучше</th>" +
+    "<th class='meta' data-tip='Ожидаемое (эталонное) значение показателя за период'>Норма</th>" +
+    "<th class='meta' data-tip='Значимость критерия относительно других'>Коэф.</th>" +
+    "<th class='meta' data-tip='Доля критерия из общих 100, распределяется по коэффициенту'>Вес, %</th>");
   emps.forEach((emp, i) => {
     const th = document.createElement("th");
+    th.className = "emp-col";
     const wrap = document.createElement("div");
     wrap.className = "emp-head";
     const nameInput = document.createElement("input");
@@ -471,17 +480,20 @@ function render() {
       tr.appendChild(nameTd);
 
       const unitTd = document.createElement("td");
+      unitTd.className = "meta";
       unitTd.textContent = crit.unit;
       unitTd.style.color = "var(--muted)";
       tr.appendChild(unitTd);
 
       const dirTd = document.createElement("td");
+      dirTd.className = "meta";
       dirTd.innerHTML = crit.dir === "up"
         ? '<span class="dir-up" data-tip="Больше — лучше: чем выше значение, тем больше баллов">&#8593;</span>'
         : '<span class="dir-down" data-tip="Меньше — лучше: чем ниже значение, тем больше баллов">&#8595;</span>';
       tr.appendChild(dirTd);
 
       const normTd = document.createElement("td");
+      normTd.className = "meta";
       const normInput = document.createElement("input");
       normInput.type = "number";
       normInput.className = "norm";
@@ -496,6 +508,7 @@ function render() {
       tr.appendChild(normTd);
 
       const coefTd = document.createElement("td");
+      coefTd.className = "meta";
       const coefInput = document.createElement("input");
       coefInput.type = "number";
       coefInput.className = "coef";
@@ -510,12 +523,13 @@ function render() {
       tr.appendChild(coefTd);
 
       const weightTd = document.createElement("td");
-      weightTd.className = "weight-cell";
+      weightTd.className = "weight-cell meta";
       weightTd.dataset.weightFor = id;
       tr.appendChild(weightTd);
 
       emps.forEach((emp, i) => {
         const td = document.createElement("td");
+        td.className = "emp-col";
         if (crit.derived) {
           const span = document.createElement("span");
           span.className = "derived-value";
@@ -524,6 +538,7 @@ function render() {
         } else {
           const input = document.createElement("input");
           input.type = "number";
+          input.className = "val";
           input.min = "0";
           input.step = "any";
           input.placeholder = "—";
