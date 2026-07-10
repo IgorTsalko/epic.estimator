@@ -282,14 +282,25 @@ const CRITERIA = {
 
 const ALL_IDS = SECTIONS.flatMap(s => s.ids);
 const RATIO_CAP = 5;           // ограничение вклада одного критерия (× вес)
-const STORAGE_KEY = "employee-rating-v1";
+const STORAGE_KEY = "employee-rating-v2";
+
+/* Тестовый сотрудник с заполненными значениями (для наглядности расчёта). */
+const SAMPLE_VALUES = {
+  jira_tasks: 14, dev_time: 12, qa_time: 6, ct: 4,
+  mr_merged: 15, mr_lifetime: 18, mr_comments: 12, review_iterations: 1.5, fix_time: 5,
+  approves_given: 13, approve_quality: 90, reviewer_reaction: 2.5,
+  reviewer_comments: 28, reviewer_assigned: 12
+};
 
 /* ---------- Состояние ---------- */
 function defaultState() {
   return {
     norms: Object.fromEntries(ALL_IDS.map(id => [id, CRITERIA[id].norm])),
     coefs: Object.fromEntries(ALL_IDS.map(id => [id, CRITERIA[id].coef])),
-    employees: [{ name: "Иванов И. И.", values: {} }]
+    employees: [
+      { name: "Иванов И. И.", values: {} },
+      { name: "Петров П. П. (тест)", values: { ...SAMPLE_VALUES } }
+    ]
   };
 }
 
