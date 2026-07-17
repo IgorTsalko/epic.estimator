@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="ru-RU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Коэффициенты критериев — круговой калькулятор</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@700;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --surface2: #f8fafc;
+  --border: #e2e8f0;
+  --border2: #cbd5e1;
+  --ink: #0f172a;
+  --ink2: #475569;
+  --ink3: #94a3b8;
+  --accent: #e05a2b;
+  --accent-light: #fff4f0;
+  --accent2: #3b6ac7;
+  --accent2-light: #eff4ff;
+  --success: #059669;
+  --warn: #d97706;
+  --danger: #dc2626;
+  --remainder: #cbd5e1;
+  --font-head: 'Unbounded', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --r: 12px;
+  --r-sm: 8px;
+  --r-lg: 16px;
+  --shadow-sm: 0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04);
+  --shadow-md: 0 4px 12px rgba(15,23,42,0.08), 0 2px 4px rgba(15,23,42,0.05);
+  --shadow-lg: 0 8px 24px rgba(15,23,42,0.10), 0 3px 8px rgba(15,23,42,0.06);
+  --tr: 0.15s ease;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  min-height: 100vh;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 20px 48px;
+}
+
+/* ── HEADER ── */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg);
+  padding: 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-mark {
+  width: 34px; height: 34px;
+  background: var(--ink);
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.logo-text {
+  font-family: var(--font-head);
+  font-weight: 900;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+.logo-text span { color: var(--accent); }
+.logo-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent2);
+  background: var(--accent2-light);
+  border: 1px solid #c7d8f8;
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+
+/* ── HERO ── */
+.hero { padding: 30px 0 22px; }
+.hero-title {
+  font-family: var(--font-head);
+  font-weight: 900;
+  font-size: clamp(24px, 4.5vw, 34px);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+.hero-title em { color: var(--accent); font-style: normal; }
+.hero-sub {
+  margin-top: 10px;
+  font-size: 15px;
+  color: var(--ink2);
+  max-width: 640px;
+}
+
+/* ── LAYOUT ── */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(0, 1.15fr);
+  gap: 22px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; }
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 22px;
+}
+.card-chart {
+  position: sticky;
+  top: 76px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+@media (max-width: 860px) { .card-chart { position: static; } }
+
+.card-title {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: var(--ink2);
+  margin-bottom: 16px;
+  align-self: flex-start;
+}
+
+/* ── CHART ── */
+.chart-wrap { position: relative; width: 100%; max-width: 320px; }
+#pie { width: 100%; height: auto; display: block; overflow: visible; }
+#pie path, #pie circle.seg { cursor: default; transition: opacity var(--tr); }
+#pie .seg-hover { opacity: 0.82; }
+
+.center-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
+}
+.center-num {
+  font-family: var(--font-head);
+  font-weight: 900;
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.center-num small { font-size: 20px; color: var(--ink3); }
+.center-cap {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink3);
+}
+
+/* stat row under chart */
+.chart-stats {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+  width: 100%;
+  max-width: 320px;
+}
+.stat {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 10px 8px;
+  text-align: center;
+}
+.stat-val { font-family: var(--font-head); font-weight: 700; font-size: 18px; color: var(--ink); }
+.stat-lbl { font-size: 10.5px; color: var(--ink3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; margin-top: 2px; }
+.stat.over .stat-val { color: var(--danger); }
+
+/* tooltip */
+.tip {
+  position: fixed;
+  z-index: 30;
+  pointer-events: none;
+  background: var(--ink);
+  color: #fff;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity 0.1s ease, transform 0.1s ease;
+  white-space: nowrap;
+  max-width: 240px;
+}
+.tip.show { opacity: 1; transform: translateY(0); }
+.tip b { font-weight: 700; }
+.tip .tip-pct { color: var(--ink3); }
+
+/* ── ADD FORM ── */
+.add-form { display: flex; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.add-form .f-name { flex: 1 1 150px; min-width: 0; }
+.add-form .f-coef { flex: 0 0 92px; }
+.field { position: relative; }
+.field-lbl {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink3);
+  margin-bottom: 4px;
+}
+input[type="text"], input[type="number"] {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--r-sm);
+  padding: 9px 11px;
+  transition: border-color var(--tr), box-shadow var(--tr);
+}
+input[type="text"]:focus, input[type="number"]:focus {
+  outline: none;
+  border-color: var(--accent2);
+  box-shadow: 0 0 0 3px var(--accent2-light);
+}
+input[type="number"] { -moz-appearance: textfield; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: background var(--tr), border-color var(--tr), color var(--tr), transform var(--tr);
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #c94d21; }
+.btn-add { align-self: flex-end; flex: 0 0 auto; padding: 9px 18px; }
+.btn-ghost {
+  background: var(--surface);
+  border-color: var(--border2);
+  color: var(--ink2);
+  font-size: 12.5px;
+  padding: 7px 12px;
+}
+.btn-ghost:hover { background: var(--surface2); border-color: var(--ink3); color: var(--ink); }
+
+.util-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+.hint {
+  margin-top: 14px;
+  font-size: 12.5px;
+  color: var(--ink2);
+  background: var(--accent2-light);
+  border: 1px solid #dbe6fb;
+  border-radius: var(--r-sm);
+  padding: 11px 13px;
+  line-height: 1.55;
+}
+.hint b { color: var(--ink); font-weight: 600; }
+
+/* ── ROWS (criteria list) ── */
+.rows { margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
+.rows-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 20px 0 4px;
+}
+.rows-head h3 {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  color: var(--ink2);
+}
+.rows-count { font-size: 12px; color: var(--ink3); font-weight: 500; }
+
+.row {
+  display: grid;
+  grid-template-columns: 14px minmax(0,1fr) 118px 70px 30px;
+  grid-template-areas: "dot name slider num del";
+  align-items: center;
+  gap: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px 12px;
+}
+.row .dot { grid-area: dot; }
+.row .r-name { grid-area: name; }
+.row .r-control { grid-area: slider; }
+.row .r-num { grid-area: num; }
+.row .r-del { grid-area: del; }
+.row .dot {
+  width: 14px; height: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+@media (max-width: 520px) {
+  .row {
+    grid-template-columns: 14px minmax(0,1fr) 74px;
+    grid-template-areas:
+      "dot name del"
+      "slider slider num";
+    row-gap: 12px;
+  }
+  .row .r-del { justify-self: end; }
+}
+.row .r-name {
+  border: 1px solid transparent;
+  background: transparent;
+  font-weight: 500;
+  padding: 5px 7px;
+  border-radius: 6px;
+}
+.row .r-name:hover { border-color: var(--border2); background: var(--surface); }
+.row .r-name:focus { border-color: var(--accent2); background: var(--surface); box-shadow: 0 0 0 3px var(--accent2-light); }
+
+.r-control { display: flex; align-items: center; }
+.r-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100%;
+  height: 5px;
+  border-radius: 5px;
+  background: var(--border2);
+  cursor: pointer;
+}
+.r-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.r-slider::-moz-range-thumb {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.r-num { text-align: center; padding: 7px 6px; font-weight: 600; }
+.r-num::-webkit-outer-spin-button, .r-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.r-del {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--ink3);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  transition: background var(--tr), color var(--tr);
+}
+.r-del:hover { background: #fef2f2; color: var(--danger); }
+
+.empty {
+  text-align: center;
+  color: var(--ink3);
+  font-size: 13px;
+  padding: 24px 12px;
+  border: 1px dashed var(--border2);
+  border-radius: var(--r);
+}
+
+/* legend rendered inside chart card on wide screens is not used; legend info lives in rows */
+.footnote {
+  margin-top: 26px;
+  font-size: 12px;
+  color: var(--ink3);
+  text-align: center;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header class="header">
+    <div class="logo">
+      <div class="logo-mark" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="2"/>
+          <path d="M12 3 A9 9 0 0 1 21 12 L12 12 Z" fill="#e05a2b"/>
+        </svg>
+      </div>
+      <div class="logo-text">Коэффициенты<span>.критериев</span></div>
+    </div>
+    <span class="logo-badge">Piechart</span>
+  </header>
+
+  <section class="hero">
+    <h1 class="hero-title">Коэффициент критерия <em>относительно 100%</em></h1>
+    <p class="hero-sub">Круг — это 100%. Добавляйте критерии и задавайте им коэффициенты. Свободная часть уходит в «Остаток». Как только сумма превысит 100, остальные критерии пропорционально пересчитываются, сохраняя свои соотношения.</p>
+  </section>
+
+  <div class="layout">
+
+    <!-- LEFT: chart -->
+    <div class="card card-chart">
+      <div class="card-title">Круговая диаграмма</div>
+      <div class="chart-wrap">
+        <svg id="pie" viewBox="0 0 200 200" role="img" aria-label="Круговая диаграмма коэффициентов критериев"></svg>
+        <div class="center-label">
+          <div class="center-num" id="centerNum">100</div>
+          <div class="center-cap" id="centerCap">Остаток</div>
+        </div>
+      </div>
+      <div class="chart-stats">
+        <div class="stat" id="statSum">
+          <div class="stat-val" id="sumVal">0</div>
+          <div class="stat-lbl">Занято</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" id="remVal">100</div>
+          <div class="stat-lbl">Остаток</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" id="cntVal">0</div>
+          <div class="stat-lbl">Критериев</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: controls -->
+    <div class="card">
+      <div class="card-title">Критерии</div>
+
+      <div class="add-form">
+        <div class="field f-name">
+          <label class="field-lbl" for="newName">Название критерия</label>
+          <input type="text" id="newName" placeholder="Например: Сложность" autocomplete="off">
+        </div>
+        <div class="field f-coef">
+          <label class="field-lbl" for="newCoef">Коэффициент</label>
+          <input type="number" id="newCoef" value="5" min="0" max="100" step="0.5">
+        </div>
+        <button class="btn btn-primary btn-add" id="addBtn">＋ Добавить</button>
+      </div>
+
+      <div class="hint">
+        <b>Как считается:</b> коэффициент критерия — это его доля в процентах от круга.
+        Пока сумма ≤ 100, свободное место идёт в «Остаток». Когда правка выводит сумму за 100,
+        остальные критерии ужимаются пропорционально текущим значениям.
+      </div>
+
+      <div class="rows-head">
+        <h3>Список</h3>
+        <span class="rows-count" id="rowsCount">0 критериев</span>
+      </div>
+      <div class="rows" id="rows"></div>
+
+      <div class="util-row">
+        <button class="btn btn-ghost" id="normBtn" title="Пропорционально дотянуть сумму до 100%">Нормализовать до 100%</button>
+        <button class="btn btn-ghost" id="eqBtn" title="Сделать все коэффициенты равными">Уравнять</button>
+        <button class="btn btn-ghost" id="resetBtn" title="Удалить все критерии">Сбросить</button>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="footnote">Один файл, без сервера. Данные живут только в этой вкладке.</p>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script>
+"use strict";
+
+const CAP = 100;
+
+/* ── state ── */
+let state = [];        // [{ id, name, coef, color }]
+let idSeq = 1;
+let hueSeq = 0;        // golden-angle hue rotation, fixed per criterion
+
+const GOLDEN = 137.508;
+function nextColor() {
+  const hue = (25 + hueSeq * GOLDEN) % 360;   // start near the brand orange, then rotate
+  hueSeq++;
+  return `hsl(${hue.toFixed(1)}, 62%, 52%)`;
+}
+
+/* ── helpers ── */
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const round2 = v => Math.round(v * 100) / 100;
+function fmt(v) {
+  const r = Math.round(v * 10) / 10;
+  return (Math.abs(r - Math.round(r)) < 1e-9) ? String(Math.round(r)) : r.toFixed(1);
+}
+const sumCoef = () => state.reduce((s, c) => s + c.coef, 0);
+const remainder = () => Math.max(0, round2(CAP - sumCoef()));
+
+/* ── core logic ──
+   Setting a criterion's coefficient to v:
+   - clamp v to [0, 100]
+   - if the new total stays within 100 → free space just goes to the remainder
+   - if it overflows → shrink the OTHER criteria proportionally to their current
+     values so the whole set fits into 100 again (keeps their ratios). */
+function setCoef(id, v) {
+  const target = state.find(c => c.id === id);
+  if (!target) return;
+  v = clamp(Number(v) || 0, 0, CAP);
+  target.coef = v;
+
+  const total = sumCoef();
+  if (total > CAP + 1e-9) {
+    const others = state.filter(c => c.id !== id);
+    const othersSum = others.reduce((s, c) => s + c.coef, 0);
+    const room = CAP - v;                       // ≥ 0 because v ≤ 100
+    if (othersSum > 1e-9) {
+      const scale = room / othersSum;
+      // keep full float precision internally; round only for display (fmt)
+      others.forEach(c => { c.coef = c.coef * scale; });
+    } else {
+      // nothing left to take from others — cap the target itself
+      target.coef = CAP;
+    }
+  }
+}
+
+function addCriterion(name, coef) {
+  const c = { id: idSeq++, name: name || `Критерий ${state.length + 1}`, coef: 0, color: nextColor() };
+  state.push(c);
+  setCoef(c.id, coef);
+  renderAll();
+  // focus the new row's slider for quick tweaking
+  const row = rowEls.get(c.id);
+  if (row) row.querySelector('.r-num').focus();
+}
+
+function deleteCriterion(id) {
+  state = state.filter(c => c.id !== id);
+  const el = rowEls.get(id);
+  if (el) { el.remove(); rowEls.delete(id); }
+  renderAll();
+}
+
+function normalize() {
+  const total = sumCoef();
+  if (total <= 1e-9) return;
+  const scale = CAP / total;
+  state.forEach(c => { c.coef = c.coef * scale; });
+  renderAll();
+}
+
+function equalize() {
+  if (!state.length) return;
+  const each = CAP / state.length;
+  state.forEach(c => { c.coef = each; });
+  renderAll();
+}
+
+function reset() {
+  if (document.activeElement && typeof document.activeElement.blur === 'function') {
+    document.activeElement.blur();
+  }
+  state = [];
+  const els = Array.from(rowEls.values());   // snapshot: removing focus can fire handlers
+  rowEls.clear();
+  els.forEach(el => { if (el.parentNode) el.parentNode.removeChild(el); });
+  renderAll();
+}
+
+/* ── geometry for pie slices ── */
+const CX = 100, CY = 100, R_OUT = 92, R_IN = 56;
+function polar(r, ang) {
+  const a = (ang - 90) * Math.PI / 180;
+  return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
+}
+function donutArc(rOut, rIn, a0, a1) {
+  const large = (a1 - a0) > 180 ? 1 : 0;
+  const [x1, y1] = polar(rOut, a0);
+  const [x2, y2] = polar(rOut, a1);
+  const [x3, y3] = polar(rIn, a1);
+  const [x4, y4] = polar(rIn, a0);
+  return `M${x1.toFixed(2)} ${y1.toFixed(2)} A${rOut} ${rOut} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} `
+       + `L${x3.toFixed(2)} ${y3.toFixed(2)} A${rIn} ${rIn} 0 ${large} 0 ${x4.toFixed(2)} ${y4.toFixed(2)} Z`;
+}
+
+/* ── rendering ── */
+const SVGNS = "http://www.w3.org/2000/svg";
+const pie = document.getElementById('pie');
+const tip = document.getElementById('tip');
+const rows = document.getElementById('rows');
+const rowEls = new Map();   // id -> row element
+
+function segments() {
+  const segs = state.filter(c => c.coef > 0)
+                    .map(c => ({ label: c.name, value: c.coef, color: c.color, kind: 'crit' }));
+  const rem = remainder();
+  if (rem > 0.001 || segs.length === 0) {
+    segs.push({ label: 'Остаток', value: rem, color: 'var(--remainder)', kind: 'rem' });
+  }
+  return segs;
+}
+
+function renderPie() {
+  pie.innerHTML = '';
+  const segs = segments();
+  const total = segs.reduce((s, x) => s + x.value, 0) || 1;
+
+  // single full segment → clean ring (avoids the 360° arc degenerate case)
+  if (segs.length === 1) {
+    const s = segs[0];
+    const ring = document.createElementNS(SVGNS, 'circle');
+    ring.setAttribute('class', 'seg');
+    ring.setAttribute('cx', CX); ring.setAttribute('cy', CY);
+    ring.setAttribute('r', (R_OUT + R_IN) / 2);
+    ring.setAttribute('fill', 'none');
+    ring.setAttribute('stroke', s.color);
+    ring.setAttribute('stroke-width', R_OUT - R_IN);
+    attachTip(ring, s, total);
+    pie.appendChild(ring);
+    return;
+  }
+
+  // gap between slices ≈ 2px of arc, converted to degrees on the outer radius
+  const GAP_DEG = (2 / (2 * Math.PI * R_OUT)) * 360;
+  let ang = 0;
+  segs.forEach(s => {
+    const span = (s.value / total) * 360;
+    const pad = span > GAP_DEG * 1.6 ? GAP_DEG / 2 : 0;
+    const a0 = ang + pad;
+    const a1 = ang + span - pad;
+    ang += span;
+
+    const path = document.createElementNS(SVGNS, 'path');
+    path.setAttribute('class', 'seg');
+    path.setAttribute('d', donutArc(R_OUT, R_IN, a0, Math.max(a0 + 0.01, a1)));
+    path.setAttribute('fill', s.color);
+    attachTip(path, s, total);
+    pie.appendChild(path);
+
+    // direct label inside big-enough criterion slices
+    if (s.kind === 'crit' && span >= 26) {
+      const mid = (a0 + a1) / 2;
+      const [lx, ly] = polar((R_OUT + R_IN) / 2, mid);
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', lx.toFixed(1));
+      t.setAttribute('y', ly.toFixed(1));
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('dominant-baseline', 'central');
+      t.setAttribute('fill', '#fff');
+      t.setAttribute('font-size', '13');
+      t.setAttribute('font-weight', '700');
+      t.setAttribute('font-family', 'Inter, sans-serif');
+      t.setAttribute('pointer-events', 'none');
+      t.style.textShadow = '0 1px 2px rgba(0,0,0,0.28)';
+      t.textContent = fmt(s.value);
+      pie.appendChild(t);
+    }
+  });
+}
+
+function attachTip(el, s, total) {
+  const pct = (s.value / total) * 100;
+  el.addEventListener('mouseenter', () => el.classList.add('seg-hover'));
+  el.addEventListener('mouseleave', () => { el.classList.remove('seg-hover'); tip.classList.remove('show'); });
+  el.addEventListener('mousemove', (e) => {
+    tip.innerHTML = `<b>${escapeHtml(s.label)}</b> — ${fmt(s.value)}` +
+                    `<br><span class="tip-pct">${fmt(pct)}% круга</span>`;
+    tip.style.left = (e.clientX + 14) + 'px';
+    tip.style.top = (e.clientY + 14) + 'px';
+    tip.classList.add('show');
+  });
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, m =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+/* rows: persistent DOM so live editing never loses focus */
+function makeRow(c) {
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.dataset.id = c.id;
+  row.innerHTML =
+    `<span class="dot"></span>` +
+    `<input class="r-name" type="text" value="" aria-label="Название">` +
+    `<div class="r-control"><input class="r-slider" type="range" min="0" max="100" step="0.5" aria-label="Коэффициент, ползунок"></div>` +
+    `<input class="r-num" type="number" min="0" max="100" step="0.5" aria-label="Коэффициент">` +
+    `<button class="r-del" title="Удалить критерий" aria-label="Удалить">×</button>`;
+
+  const nameEl = row.querySelector('.r-name');
+  const slider = row.querySelector('.r-slider');
+  const num = row.querySelector('.r-num');
+
+  nameEl.value = c.name;
+  nameEl.addEventListener('input', () => { c.name = nameEl.value; renderPie(); });
+
+  const onCoef = (val) => { setCoef(c.id, val); renderPieAndStatsAndRowValues(); };
+  slider.addEventListener('input', () => onCoef(slider.value));
+  num.addEventListener('input', () => onCoef(num.value));
+  // on blur just tidy this field's displayed value — no full re-render (would
+  // mutate the row list re-entrantly while this element is being blurred)
+  num.addEventListener('blur', () => { num.value = fmt(c.coef); });
+
+  row.querySelector('.r-del').addEventListener('click', () => deleteCriterion(c.id));
+
+  rowEls.set(c.id, row);
+  return row;
+}
+
+function renderRows() {
+  // remove rows whose criteria are gone
+  rowEls.forEach((el, id) => {
+    if (!state.find(c => c.id === id)) { el.remove(); rowEls.delete(id); }
+  });
+  // ensure a row exists for each criterion, in order
+  state.forEach(c => {
+    let el = rowEls.get(c.id);
+    if (!el) el = makeRow(c);
+    if (el.parentNode !== rows) rows.appendChild(el);
+    updateRowValues(el, c);
+  });
+  // empty state
+  let empty = rows.querySelector('.empty');
+  if (state.length === 0) {
+    if (!empty) {
+      empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = 'Пока нет критериев. Добавьте первый — например, с коэффициентом 5.';
+      rows.appendChild(empty);
+    }
+  } else if (empty) {
+    empty.remove();
+  }
+}
+
+function updateRowValues(el, c) {
+  const slider = el.querySelector('.r-slider');
+  const num = el.querySelector('.r-num');
+  el.querySelector('.dot').style.background = c.color;
+  if (document.activeElement !== slider) slider.value = c.coef;
+  if (document.activeElement !== num) num.value = fmt(c.coef);
+  // keep name in sync only if not being edited
+  const nameEl = el.querySelector('.r-name');
+  if (document.activeElement !== nameEl && nameEl.value !== c.name) nameEl.value = c.name;
+}
+
+/* light update used during live slider drag: no DOM rebuild, keep focus */
+function renderPieAndStatsAndRowValues() {
+  renderPie();
+  renderStats();
+  state.forEach(c => {
+    const el = rowEls.get(c.id);
+    if (el) updateRowValues(el, c);
+  });
+}
+
+function renderStats() {
+  const s = round2(sumCoef());
+  const rem = remainder();
+  document.getElementById('sumVal').textContent = fmt(s);
+  document.getElementById('remVal').textContent = fmt(rem);
+  document.getElementById('cntVal').textContent = state.length;
+  document.getElementById('centerNum').innerHTML = fmt(rem) + '<small>%</small>';
+  document.getElementById('centerCap').textContent = 'Остаток';
+  document.getElementById('rowsCount').textContent =
+    state.length + ' ' + plural(state.length, 'критерий', 'критерия', 'критериев');
+
+  // over-budget visual cue (can happen transiently before rescale, or if fully packed)
+  const statSum = document.getElementById('statSum');
+  statSum.classList.toggle('over', s > CAP + 0.05);
+}
+
+function plural(n, one, few, many) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
+  return many;
+}
+
+function renderAll() {
+  renderRows();
+  renderPie();
+  renderStats();
+}
+
+/* ── wire up controls ── */
+const newName = document.getElementById('newName');
+const newCoef = document.getElementById('newCoef');
+
+function doAdd() {
+  const coef = clamp(Number(newCoef.value) || 0, 0, CAP);
+  addCriterion(newName.value.trim(), coef);
+  newName.value = '';
+  newCoef.value = '5';
+  newName.focus();
+}
+
+document.getElementById('addBtn').addEventListener('click', doAdd);
+newName.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
+newCoef.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
+
+document.getElementById('normBtn').addEventListener('click', normalize);
+document.getElementById('eqBtn').addEventListener('click', equalize);
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (state.length === 0 || confirm('Удалить все критерии?')) reset();
+});
+
+/* ── seed with a small demo so the tool is not empty on first open ── */
+addCriterion('Сложность', 25);
+addCriterion('Риск', 15);
+addCriterion('Ценность', 20);
+
+renderAll();
+</script>
+</body>
+</html>
