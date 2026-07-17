@@ -169,13 +169,13 @@ html, body {
 .center-num {
   font-family: var(--font-head);
   font-weight: 900;
-  font-size: 34px;
+  font-size: 42px;
   line-height: 1;
   letter-spacing: -0.03em;
   color: var(--ink);
   white-space: nowrap;
 }
-.center-num small { font-size: 15px; font-weight: 700; color: var(--ink3); letter-spacing: 0; }
+.center-num small { font-size: 22px; font-weight: 700; color: var(--ink3); letter-spacing: 0; }
 .center-cap {
   margin-top: 6px;
   font-size: 11px;
@@ -488,6 +488,7 @@ input[type="number"] { -moz-appearance: textfield; }
         <b>Как считается:</b> коэффициент критерия — это его доля от круга (от 0 до 1, где 1 = весь круг).
         Пока сумма ≤ 1, свободное место идёт в «Остаток». Когда правка выводит сумму за 1,
         остальные критерии ужимаются пропорционально текущим значениям.
+        <b>На диаграмме значения показаны в процентах</b> (например, коэффициент 0.25 = 25%).
       </div>
 
       <div class="rows-head">
@@ -702,7 +703,7 @@ function renderPie() {
       t.setAttribute('font-family', 'Inter, sans-serif');
       t.setAttribute('pointer-events', 'none');
       t.style.textShadow = '0 1px 2px rgba(0,0,0,0.28)';
-      t.textContent = fmt(s.value);
+      t.textContent = fmtPct(s.value) + '%';   // percent on the chart, e.g. 25%
       pie.appendChild(t);
     }
   });
@@ -713,8 +714,9 @@ function attachTip(el, s, total) {
   el.addEventListener('mouseenter', () => el.classList.add('seg-hover'));
   el.addEventListener('mouseleave', () => { el.classList.remove('seg-hover'); tip.classList.remove('show'); });
   el.addEventListener('mousemove', (e) => {
-    tip.innerHTML = `<b>${escapeHtml(s.label)}</b> — ${fmt(s.value)}` +
-                    `<br><span class="tip-pct">${fmtPct(ratio)}% круга</span>`;
+    const second = s.kind === 'crit' ? `коэффициент ${fmt(s.value)}` : 'свободная часть круга';
+    tip.innerHTML = `<b>${escapeHtml(s.label)}</b> — ${fmtPct(ratio)}%` +
+                    `<br><span class="tip-pct">${second}</span>`;
     tip.style.left = (e.clientX + 14) + 'px';
     tip.style.top = (e.clientY + 14) + 'px';
     tip.classList.add('show');
@@ -808,11 +810,12 @@ function renderPieAndStatsAndRowValues() {
 function renderStats() {
   const s = round2(sumCoef());
   const rem = remainder();
-  document.getElementById('sumVal').textContent = fmt(s);
-  document.getElementById('remVal').textContent = fmt(rem);
+  // chart area is shown in percent (numbers > 1); coefficients in the list stay 0–1
+  document.getElementById('sumVal').textContent = fmtPct(s) + '%';
+  document.getElementById('remVal').textContent = fmtPct(rem) + '%';
   document.getElementById('cntVal').textContent = state.length;
-  document.getElementById('centerNum').innerHTML = fmt(rem) + '<small>&nbsp;/&nbsp;1</small>';
-  document.getElementById('centerCap').textContent = 'Остаток · ' + fmtPct(rem) + '%';
+  document.getElementById('centerNum').innerHTML = fmtPct(rem) + '<small>%</small>';
+  document.getElementById('centerCap').textContent = 'Остаток';
   document.getElementById('rowsCount').textContent =
     state.length + ' ' + plural(state.length, 'критерий', 'критерия', 'критериев');
 
