@@ -169,12 +169,13 @@ html, body {
 .center-num {
   font-family: var(--font-head);
   font-weight: 900;
-  font-size: 40px;
+  font-size: 34px;
   line-height: 1;
   letter-spacing: -0.03em;
   color: var(--ink);
+  white-space: nowrap;
 }
-.center-num small { font-size: 20px; color: var(--ink3); }
+.center-num small { font-size: 15px; font-weight: 700; color: var(--ink3); letter-spacing: 0; }
 .center-cap {
   margin-top: 6px;
   font-size: 11px;
@@ -436,7 +437,7 @@ input[type="number"] { -moz-appearance: textfield; }
 
   <section class="hero">
     <h1 class="hero-title">Коэффициент критерия <em>относительно 100%</em></h1>
-    <p class="hero-sub">Круг — это 100%. Добавляйте критерии и задавайте им коэффициенты. Свободная часть уходит в «Остаток». Как только сумма превысит 100, остальные критерии пропорционально пересчитываются, сохраняя свои соотношения.</p>
+    <p class="hero-sub">Круг — это 1 (100%). Добавляйте критерии и задавайте им коэффициенты от 0 до 1 (дробные). Свободная часть уходит в «Остаток». Как только сумма превысит 1, остальные критерии пропорционально пересчитываются, сохраняя свои соотношения.</p>
   </section>
 
   <div class="layout">
@@ -477,15 +478,15 @@ input[type="number"] { -moz-appearance: textfield; }
           <input type="text" id="newName" placeholder="Например: Сложность" autocomplete="off">
         </div>
         <div class="field f-coef">
-          <label class="field-lbl" for="newCoef">Коэффициент</label>
-          <input type="number" id="newCoef" value="5" min="0" max="100" step="0.5">
+          <label class="field-lbl" for="newCoef">Коэфф. (0–1)</label>
+          <input type="number" id="newCoef" value="0.05" min="0" max="1" step="0.05">
         </div>
         <button class="btn btn-primary btn-add" id="addBtn">＋ Добавить</button>
       </div>
 
       <div class="hint">
-        <b>Как считается:</b> коэффициент критерия — это его доля в процентах от круга.
-        Пока сумма ≤ 100, свободное место идёт в «Остаток». Когда правка выводит сумму за 100,
+        <b>Как считается:</b> коэффициент критерия — это его доля от круга (от 0 до 1, где 1 = весь круг).
+        Пока сумма ≤ 1, свободное место идёт в «Остаток». Когда правка выводит сумму за 1,
         остальные критерии ужимаются пропорционально текущим значениям.
       </div>
 
@@ -512,7 +513,7 @@ input[type="number"] { -moz-appearance: textfield; }
 <script>
 "use strict";
 
-const CAP = 100;
+const CAP = 1;   // the whole circle = 1; coefficients are fractions in [0, 1]
 
 /* ── state ── */
 let state = [];        // [{ id, name, coef, color }]
@@ -529,9 +530,18 @@ function nextColor() {
 /* ── helpers ── */
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const round2 = v => Math.round(v * 100) / 100;
+// fractions in [0,1] shown with up to 2 decimals, trailing zero trimmed
 function fmt(v) {
-  const r = Math.round(v * 10) / 10;
-  return (Math.abs(r - Math.round(r)) < 1e-9) ? String(Math.round(r)) : r.toFixed(1);
+  const r = Math.round(v * 100) / 100;
+  if (Math.abs(r - Math.round(r)) < 1e-9) return String(Math.round(r)); // 0 or 1
+  let s = r.toFixed(2);
+  if (s.endsWith('0')) s = s.slice(0, -1);   // 0.50 -> 0.5, keep 0.05
+  return s;
+}
+// percent of the whole circle, for tooltips
+function fmtPct(v) {
+  const p = Math.round(v * 1000) / 10;
+  return (Math.abs(p - Math.round(p)) < 1e-9) ? String(Math.round(p)) : p.toFixed(1);
 }
 const sumCoef = () => state.reduce((s, c) => s + c.coef, 0);
 const remainder = () => Math.max(0, round2(CAP - sumCoef()));
@@ -699,12 +709,12 @@ function renderPie() {
 }
 
 function attachTip(el, s, total) {
-  const pct = (s.value / total) * 100;
+  const ratio = total > 0 ? s.value / total : 0;   // share of the whole circle
   el.addEventListener('mouseenter', () => el.classList.add('seg-hover'));
   el.addEventListener('mouseleave', () => { el.classList.remove('seg-hover'); tip.classList.remove('show'); });
   el.addEventListener('mousemove', (e) => {
     tip.innerHTML = `<b>${escapeHtml(s.label)}</b> — ${fmt(s.value)}` +
-                    `<br><span class="tip-pct">${fmt(pct)}% круга</span>`;
+                    `<br><span class="tip-pct">${fmtPct(ratio)}% круга</span>`;
     tip.style.left = (e.clientX + 14) + 'px';
     tip.style.top = (e.clientY + 14) + 'px';
     tip.classList.add('show');
@@ -724,8 +734,8 @@ function makeRow(c) {
   row.innerHTML =
     `<span class="dot"></span>` +
     `<input class="r-name" type="text" value="" aria-label="Название">` +
-    `<div class="r-control"><input class="r-slider" type="range" min="0" max="100" step="0.5" aria-label="Коэффициент, ползунок"></div>` +
-    `<input class="r-num" type="number" min="0" max="100" step="0.5" aria-label="Коэффициент">` +
+    `<div class="r-control"><input class="r-slider" type="range" min="0" max="1" step="0.01" aria-label="Коэффициент, ползунок"></div>` +
+    `<input class="r-num" type="number" min="0" max="1" step="0.01" aria-label="Коэффициент">` +
     `<button class="r-del" title="Удалить критерий" aria-label="Удалить">×</button>`;
 
   const nameEl = row.querySelector('.r-name');
@@ -766,7 +776,7 @@ function renderRows() {
     if (!empty) {
       empty = document.createElement('div');
       empty.className = 'empty';
-      empty.textContent = 'Пока нет критериев. Добавьте первый — например, с коэффициентом 5.';
+      empty.textContent = 'Пока нет критериев. Добавьте первый — например, с коэффициентом 0.05.';
       rows.appendChild(empty);
     }
   } else if (empty) {
@@ -801,14 +811,14 @@ function renderStats() {
   document.getElementById('sumVal').textContent = fmt(s);
   document.getElementById('remVal').textContent = fmt(rem);
   document.getElementById('cntVal').textContent = state.length;
-  document.getElementById('centerNum').innerHTML = fmt(rem) + '<small>%</small>';
-  document.getElementById('centerCap').textContent = 'Остаток';
+  document.getElementById('centerNum').innerHTML = fmt(rem) + '<small>&nbsp;/&nbsp;1</small>';
+  document.getElementById('centerCap').textContent = 'Остаток · ' + fmtPct(rem) + '%';
   document.getElementById('rowsCount').textContent =
     state.length + ' ' + plural(state.length, 'критерий', 'критерия', 'критериев');
 
   // over-budget visual cue (can happen transiently before rescale, or if fully packed)
   const statSum = document.getElementById('statSum');
-  statSum.classList.toggle('over', s > CAP + 0.05);
+  statSum.classList.toggle('over', s > CAP + 0.005);
 }
 
 function plural(n, one, few, many) {
@@ -832,7 +842,7 @@ function doAdd() {
   const coef = clamp(Number(newCoef.value) || 0, 0, CAP);
   addCriterion(newName.value.trim(), coef);
   newName.value = '';
-  newCoef.value = '5';
+  newCoef.value = '0.05';
   newName.focus();
 }
 
@@ -847,9 +857,9 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 });
 
 /* ── seed with a small demo so the tool is not empty on first open ── */
-addCriterion('Сложность', 25);
-addCriterion('Риск', 15);
-addCriterion('Ценность', 20);
+addCriterion('Сложность', 0.25);
+addCriterion('Риск', 0.15);
+addCriterion('Ценность', 0.20);
 
 renderAll();
 </script>
