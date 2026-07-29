@@ -663,6 +663,66 @@ textarea#epic-input::placeholder { color: var(--ink3); }
   align-items: center;
 }
 
+/* self-score card (критерий с оценкой пользователя) */
+.self-score-card {
+  margin-top: 8px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 88%;
+  box-shadow: var(--shadow-sm);
+}
+.self-score-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.self-score-scale {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.self-score-opt {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all var(--tr);
+}
+.self-score-opt:hover { border-color: var(--border2); }
+.self-score-opt.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(224,90,43,0.2);
+}
+.self-score-comment {
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink);
+  padding: 9px 12px;
+  outline: none;
+  resize: none;
+  min-height: 52px;
+  line-height: 1.55;
+  transition: border-color var(--tr);
+}
+.self-score-comment:focus { border-color: var(--accent2); }
+.self-score-comment::placeholder { color: var(--ink3); }
+
 /* chat footer */
 .chat-footer {
   flex-shrink: 0;
@@ -836,6 +896,20 @@ body.chat-mode #app { height: 100vh; }
   border: 1px solid var(--border);
 }
 .crit-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--ink); }
+.crit-user-tag {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 1px 7px;
+  border-radius: 20px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border: 1px solid #f3c9b6;
+  vertical-align: middle;
+}
 .crit-sp {
   font-weight: 700;
   font-size: 15px;
@@ -1498,6 +1572,7 @@ const CRITERIA_PROMPTS = [
   {
     name: "Риски и последствия ошибок",
     type: "extra",
+    userScorable: true,
     description: `Что произойдёт при ошибке в реализации? Есть ли финансовые или регуляторные последствия? Насколько широко затронуты пользователи и насколько сложно исправить?`,
     system: buildCriterionSystem(
       "Риски и последствия ошибок",
@@ -1594,6 +1669,7 @@ const EXPRESS_SYSTEM = `Ты — инструмент экспресс-оцен�
    5 — ошибка бьёт по деньгам, скорингу, платежам, сложным лимитам; дорогие инциденты; разборы с риск-менеджментом/безопасностью; повышенное внимание регуляторов или партнёров
    8 — системные последствия: массовые клиенты, фундаментальная кредитная/платёжная логика, публичный имидж; регуляторные претензии, AML/суды, кризис-менеджмент с длинным хвостом исправлений
    Ключевые признаки: есть ли финансовые последствия; есть ли регуляторные риски; сколько пользователей затронуто.
+   Особое правило (право оценки за пользователем): этот критерий менеджеры оценивают отдельно. Если в описании эпика есть информация о рисках/последствиях ошибок — учти её и оцени по шкале выше. Если такой информации в описании НЕТ и уточнять её не требуется — ставь sp = 1, а в reason укажи, что информация по критерию не была предоставлена (например: 'Информация о рисках и последствиях ошибок не предоставлена'). Не придумывай риски и не выводи их из других критериев.
 
 7. "Коммуникации" (дополнительный)
    1 — минимальны, всё внутри одной команды
@@ -1673,6 +1749,7 @@ const S = {
   modifier: { steps: 0, reason: '' },
   loading: false,
   awaitingAdvance: false,
+  awaitingChoice: false,
   clarifying: false,
   currentBadge: null,
   expressMode: false,
@@ -1913,7 +1990,7 @@ function refreshInputState() {
     if (hint) hint.style.display = canType ? '' : 'none';
   } else {
     ynRow.style.display = 'none';
-    const disabled = S.loading || S.awaitingAdvance;
+    const disabled = S.loading || S.awaitingAdvance || S.awaitingChoice;
     document.getElementById('btn-send').disabled   = disabled;
     document.getElementById('free-input').disabled = disabled;
     document.getElementById('free-input').placeholder = disabled ? ''
@@ -1952,6 +2029,122 @@ function clarifyCurrentCriterion(card) {
   S.clarifying = true;
   addMsg('ai', 'Уточните детали — я учту новую информацию и пересмотрю оценку.');
   refreshInputState();
+}
+
+// ── Критерий, который менеджеры оценивают отдельно ──
+// Пользователь либо оценивает его в обычном диалоге (вместе с менеджером),
+// либо указывает уже готовую оценку — тогда в итоге помечаем её как
+// оставленную пользователем.
+const USER_SCORE_OPTIONS = [1, 2, 3, 5, 8];
+
+function showUserScoreChoice(crit) {
+  const area = document.getElementById('chat-area');
+  const card = document.createElement('div');
+  card.className = 'criterion-result-card manager-choice-card';
+  card.innerHTML = `
+    <div class="crit-result-reason">Этот критерий менеджеры оценивают отдельно. Оцените его вместе с менеджером или укажите уже готовую оценку.</div>
+    <div class="criterion-result-actions">
+      <button class="btn btn-primary btn-assess-crit" type="button">Оценить критерий</button>
+      <button class="btn btn-ghost btn-own-score" type="button">Указать свою оценку</button>
+    </div>`;
+  card.querySelector('.btn-assess-crit').addEventListener('click', () => {
+    card.remove();
+    S.awaitingChoice = false;
+    enableInput();
+  });
+  card.querySelector('.btn-own-score').addEventListener('click', () => {
+    showSelfScoreForm(card, crit);
+  });
+  area.appendChild(card);
+  area.scrollTop = area.scrollHeight;
+}
+
+function showSelfScoreForm(prevCard, crit) {
+  if (prevCard) prevCard.remove();
+  S.awaitingChoice = true;
+  refreshInputState();
+
+  const area = document.getElementById('chat-area');
+  const card = document.createElement('div');
+  card.className = 'self-score-card';
+  card.innerHTML = `
+    <div class="self-score-title">Укажите оценку критерия «${escHtml(crit.name)}»</div>
+    <div class="self-score-scale">${USER_SCORE_OPTIONS.map(v =>
+      `<button class="self-score-opt" type="button" data-sp="${v}">${v}</button>`).join('')}</div>
+    <textarea class="self-score-comment" placeholder="Комментарий к оценке (необязательно)"></textarea>
+    <div class="criterion-result-actions">
+      <button class="btn btn-ghost btn-score-back" type="button">← Назад</button>
+      <button class="btn btn-primary btn-score-confirm" type="button" disabled>Подтвердить оценку</button>
+    </div>`;
+
+  let selected = null;
+  const confirmBtn = card.querySelector('.btn-score-confirm');
+  card.querySelectorAll('.self-score-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selected = Number(btn.dataset.sp);
+      card.querySelectorAll('.self-score-opt').forEach(b => b.classList.toggle('selected', b === btn));
+      confirmBtn.disabled = false;
+    });
+  });
+  card.querySelector('.btn-score-back').addEventListener('click', () => {
+    card.remove();
+    showUserScoreChoice(crit);
+  });
+  confirmBtn.addEventListener('click', () => {
+    if (selected == null) return;
+    applyUserScore(card, crit, selected, card.querySelector('.self-score-comment').value);
+  });
+
+  area.appendChild(card);
+  area.scrollTop = area.scrollHeight;
+}
+
+function applyUserScore(formCard, crit, sp, comment) {
+  const note = (comment || '').trim();
+  recordUserInput(crit.name, note
+    ? `Оценка ${sp} SP (оставлена пользователем): ${note}`
+    : `Оценка ${sp} SP (оставлена пользователем)`);
+  S.scores.push({ name: crit.name, type: crit.type, sp, reason: note, userProvided: true });
+
+  formCard.remove();
+  S.awaitingChoice = false;
+  S.awaitingAdvance = true;
+  S.clarifying = false;
+  S.currentBadge = showScoreBadge(sp);
+  showUserScoreResultCard(sp, note, crit);
+  refreshInputState();
+}
+
+function showUserScoreResultCard(sp, note, crit) {
+  const area = document.getElementById('chat-area');
+  const card = document.createElement('div');
+  const isLast = S.currentIdx === CRITERIA_PROMPTS.length - 1;
+  const nextLabel = isLast ? 'Показать итоговую оценку →' : 'Следующий критерий →';
+  const reasonText = note ? `Оценка оставлена пользователем. ${note}` : 'Оценка оставлена пользователем.';
+
+  card.className = 'criterion-result-card';
+  card.innerHTML = `
+    <div class="crit-result-reason">${escHtml(reasonText)}</div>
+    <div class="criterion-result-actions">
+      <button class="btn btn-ghost btn-edit-score" type="button">Изменить оценку</button>
+      <button class="btn btn-primary" type="button" onclick="advanceCriterion()">${nextLabel}</button>
+    </div>`;
+  card.querySelector('.btn-edit-score').addEventListener('click', () => editUserScore(card, crit));
+
+  area.appendChild(card);
+  area.scrollTop = area.scrollHeight;
+}
+
+function editUserScore(card, crit) {
+  if (S.loading) return;
+  card.remove();
+  S.currentBadge?.remove();
+  S.currentBadge = null;
+  S.scores.pop();
+  const lastInput = S.userInputs.at(-1);
+  if (lastInput && lastInput.criterion === crit.name) S.userInputs.pop();
+  S.awaitingAdvance = false;
+  showSelfScoreForm(null, crit);
 }
 
 function updateProgress() {
@@ -2142,6 +2335,7 @@ async function buildExpressResult(data) {
 async function openCriterion() {
   S.history = [];
   S.awaitingAdvance = false;
+  S.awaitingChoice = false;
   S.clarifying = false;
   S.currentBadge = null;
   document.getElementById('chat-area').innerHTML = '';
@@ -2151,7 +2345,15 @@ async function openCriterion() {
   const crit = CRITERIA_PROMPTS[S.currentIdx];
   addMsg('ai', crit.description);
 
-  enableInput();
+  // Критерий, который менеджеры оценивают отдельно: предлагаем либо оценить
+  // его вместе с менеджером (обычный диалог), либо указать готовую оценку.
+  if (crit.userScorable) {
+    S.awaitingChoice = true;
+    showUserScoreChoice(crit);
+    refreshInputState();
+  } else {
+    enableInput();
+  }
 }
 
 async function sendAnswer(text) {
@@ -2408,17 +2610,18 @@ function renderCriteriaGrid() {
     row.className = 'crit-row';
     const pct = Math.min((s.sp / Math.max(maxSP, 8)) * 100, 100);
     const hasReason = s.reason && s.reason.trim();
+    const userTag = s.userProvided ? '<span class="crit-user-tag">оценка пользователя</span>' : '';
     row.innerHTML = `
       <div class="crit-row-main">
         <div class="crit-type ${s.type}">${s.type === 'base' ? 'базовый' : 'доп.'}</div>
-        <div class="crit-name">${s.name}</div>
+        <div class="crit-name">${escHtml(s.name)}${userTag}</div>
         <div class="crit-bar-wrap">
           <div class="crit-bar"><div class="crit-bar-fill" style="width:${pct}%"></div></div>
         </div>
         <div class="crit-sp">${s.sp}</div>
         ${hasReason ? '<div class="crit-chevron">▼</div>' : ''}
       </div>
-      ${hasReason ? `<div class="crit-reason">${s.reason}</div>` : ''}`;
+      ${hasReason ? `<div class="crit-reason">${escHtml(s.reason)}</div>` : ''}`;
     if (hasReason) {
       row.addEventListener('click', () => row.classList.toggle('open'));
     }
@@ -2455,8 +2658,9 @@ function buildSummaryText(scores, breakdown) {
   lines.push(`Итоговая оценка эпика: ${breakdown.finalSP} SP\n`);
   lines.push('Оценки по критериям:');
   scores.forEach(s => {
+    const userPart = s.userProvided ? ' (оценка оставлена пользователем)' : '';
     const reasonPart = s.reason ? ` — ${s.reason.trim()}` : '';
-    lines.push(`• ${s.name}: ${s.sp} SP${reasonPart}`);
+    lines.push(`• ${s.name}: ${s.sp} SP${userPart}${reasonPart}`);
   });
   if (breakdown.modifier.steps > 0) {
     const reasonPart = breakdown.modifier.reason ? ` — ${breakdown.modifier.reason}` : '';
@@ -2570,7 +2774,7 @@ function cancelAssessment() {
 function resetAll() {
   S.currentIdx = 0;
   S.history = []; S.scores = []; S.userInputs = []; S.loading = false; S.awaitingAdvance = false;
-  S.clarifying = false; S.currentBadge = null;
+  S.awaitingChoice = false; S.clarifying = false; S.currentBadge = null;
   S.modifier = { steps: 0, reason: '' };
   S.expressPhase = null;
   document.getElementById('chat-area').innerHTML = '';
