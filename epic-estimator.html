@@ -2322,11 +2322,11 @@ function buildExplanation(scores, breakdown) {
 
   if (breakdown.modifier.steps > 0) {
     const reasonPart = breakdown.modifier.reason ? ` (${breakdown.modifier.reason})` : '';
-    explanation += ` Применён модификатор${reasonPart}: оценка повышена на ${breakdown.modifier.steps} ${breakdown.modifier.steps === 1 ? 'шаг' : 'шага'} Фибоначчи до ${breakdown.modifiedBase} SP.`;
+    explanation += ` Применён модификатор${reasonPart}: оценка повышена на ${breakdown.modifier.steps} ${breakdown.modifier.steps === 1 ? 'шаг' : 'шага'} до ${breakdown.modifiedBase} SP.`;
   }
 
   if (breakdown.extraBumped) {
-    explanation += ` Дополнительный критерий «${extraCrit?.name ?? '—'}» (${breakdown.maxExtra} SP) превышает — оценка повышена на 1 шаг Фибоначчи до ${breakdown.finalSP} SP.`;
+    explanation += ` Дополнительный критерий «${extraCrit?.name ?? '—'}» (${breakdown.maxExtra} SP) превышает — оценка повышена на 1 шаг до ${breakdown.finalSP} SP.`;
   } else {
     explanation += ` Дополнительные критерии не превышают — итоговая оценка ${breakdown.finalSP} SP.`;
   }
@@ -2461,7 +2461,7 @@ function buildSummaryText(scores, breakdown) {
   if (breakdown.modifier.steps > 0) {
     const reasonPart = breakdown.modifier.reason ? ` — ${breakdown.modifier.reason}` : '';
     lines.push('');
-    lines.push(`Модификатор: ${modifierStepsLabel(breakdown.modifier.steps)} Фибоначчи (${breakdown.maxBase} → ${breakdown.modifiedBase} SP)${reasonPart}`);
+    lines.push(`Модификатор: ${modifierStepsLabel(breakdown.modifier.steps)} (${breakdown.maxBase} → ${breakdown.modifiedBase} SP)${reasonPart}`);
   }
   return lines.join('\n');
 }
