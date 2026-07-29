@@ -279,8 +279,9 @@ textarea#epic-input {
   font-size: 14px;
   line-height: 1.6;
   padding: 12px 14px;
-  resize: none;
-  height: 128px;
+  resize: vertical;
+  min-height: 128px;
+  max-height: 55vh;
   outline: none;
   width: 100%;
   transition: border-color var(--tr), box-shadow var(--tr);
@@ -598,6 +599,8 @@ textarea#epic-input::placeholder { color: var(--ink3); }
   background: var(--ink);
   color: #fff;
   border-top-right-radius: 3px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 /* typing */
@@ -750,7 +753,8 @@ textarea#epic-input::placeholder { color: var(--ink3); }
   gap: 8px;
 }
 #free-input {
-  flex: 1;
+  flex: 0 0 auto;
+  width: 100%;
   background: var(--surface);
   border: 1.5px solid var(--border);
   border-radius: var(--r-sm);
@@ -760,9 +764,9 @@ textarea#epic-input::placeholder { color: var(--ink3); }
   padding: 10px 14px;
   outline: none;
   transition: border-color var(--tr), box-shadow var(--tr);
-  resize: none;
+  resize: vertical;
   min-height: 68px;
-  max-height: 160px;
+  max-height: 45vh;
   line-height: 1.55;
   box-shadow: var(--shadow-sm);
 }
@@ -2197,7 +2201,7 @@ async function startSession() {
     document.getElementById('express-phase-label').textContent = 'Анализ...';
     show('screen-chat');
     document.getElementById('chat-area').innerHTML = '';
-    document.getElementById('free-input').value = '';
+    clearFreeInput();
     refreshInputState();
     await runExpressSession(epicText);
     return;
@@ -2253,7 +2257,7 @@ async function runExpressSession(epicText) {
 
 async function sendExpressAnswer(text) {
   if (S.loading || S.expressPhase !== 'clarification' || !text.trim()) return;
-  document.getElementById('free-input').value = '';
+  clearFreeInput();
   addMsg('usr', text);
   recordUserInput('Ответы на уточнения', text);
   S.history.push({ role: 'user', content: text });
@@ -2338,7 +2342,7 @@ async function openCriterion() {
   S.clarifying = false;
   S.currentBadge = null;
   document.getElementById('chat-area').innerHTML = '';
-  document.getElementById('free-input').value = '';
+  clearFreeInput();
   updateProgress();
 
   const crit = CRITERIA_PROMPTS[S.currentIdx];
@@ -2357,7 +2361,7 @@ async function openCriterion() {
 
 async function sendAnswer(text) {
   if (S.loading || S.awaitingAdvance || !text.trim()) return;
-  document.getElementById('free-input').value = '';
+  clearFreeInput();
   addMsg('usr', text);
   recordUserInput(CRITERIA_PROMPTS[S.currentIdx].name, text);
   S.history.push({ role: 'user', content: text });
@@ -2392,13 +2396,37 @@ function sendFree() {
   else sendAnswer(v);
 }
 
+// Автоматически подгоняет высоту textarea под содержимое (только увеличивает,
+// чтобы не мешать ручному растягиванию за уголок) вплоть до max-height из CSS.
+function autoGrowInput(el) {
+  if (!el) return;
+  const border = el.offsetHeight - el.clientHeight;   // толщина рамок (border-box)
+  if (el.scrollHeight > el.clientHeight) {             // текст не помещается — растим
+    const maxH = parseFloat(getComputedStyle(el).maxHeight) || Infinity;
+    el.style.height = Math.min(el.scrollHeight + border, maxH) + 'px';
+  }
+}
+
+// Очищает поле ввода и сбрасывает его высоту к исходной.
+function clearFreeInput() {
+  const el = document.getElementById('free-input');
+  el.value = '';
+  el.style.height = '';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('free-input').addEventListener('keydown', (e) => {
+  const free = document.getElementById('free-input');
+  free.addEventListener('keydown', (e) => {
+    // Отправка по Ctrl/Cmd+Enter; обычный Enter вставляет перенос строки.
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       sendFree();
     }
   });
+  free.addEventListener('input', () => autoGrowInput(free));
+
+  const epic = document.getElementById('epic-input');
+  if (epic) epic.addEventListener('input', () => autoGrowInput(epic));
 });
 
 function enableInput() {
@@ -2780,7 +2808,9 @@ function resetAll() {
   document.getElementById('criteria-grid').innerHTML = '';
   const modBox = document.getElementById('res-modifier');
   if (modBox) { modBox.style.display = 'none'; modBox.innerHTML = ''; }
-  document.getElementById('epic-input').value = '';
+  const epicEl = document.getElementById('epic-input');
+  epicEl.value = '';
+  epicEl.style.height = '';
   document.getElementById('progress-standard').style.display = '';
   document.getElementById('progress-express').style.display  = 'none';
   show('screen-start');
@@ -2788,10 +2818,6 @@ function resetAll() {
 
 document.getElementById('summary-copy-btn').innerHTML = COPY_ICON;
 document.getElementById('user-input-copy-btn').innerHTML = COPY_ICON;
-
-document.getElementById('free-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); sendFree(); }
-});
 </script>
 </body>
 </html>
