@@ -718,8 +718,9 @@ textarea#epic-input::placeholder { color: var(--ink3); }
   color: var(--ink);
   padding: 9px 12px;
   outline: none;
-  resize: none;
+  resize: vertical;
   min-height: 52px;
+  max-height: 40vh;
   line-height: 1.55;
   transition: border-color var(--tr);
 }
@@ -764,12 +765,27 @@ textarea#epic-input::placeholder { color: var(--ink3); }
   padding: 10px 14px;
   outline: none;
   transition: border-color var(--tr), box-shadow var(--tr);
-  resize: vertical;
+  resize: none;
   min-height: 68px;
   max-height: 45vh;
   line-height: 1.55;
   box-shadow: var(--shadow-sm);
 }
+/* Ручка ресайза сверху: поле закреплено снизу и растёт вверх, поэтому
+   тянуть нужно за верхнюю кромку, а не за угол снизу. */
+.input-resizer {
+  align-self: center;
+  width: 44px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 3px;
+  background: var(--border);
+  cursor: ns-resize;
+  touch-action: none;
+  transition: background var(--tr);
+}
+.input-resizer:hover { background: var(--ink3); }
+.input-resizer:active { background: var(--accent2); }
 #free-input:focus {
   border-color: var(--accent2);
   box-shadow: 0 0 0 3px rgba(59,106,199,0.08);
@@ -1357,6 +1373,7 @@ body.chat-mode #app { height: 100vh; }
         <button class="btn btn-no"  id="btn-no"  onclick="quickAnswer('Нет')" disabled>✗ Нет</button>
       </div>
       <div class="free-row">
+        <div class="input-resizer" id="free-resizer" title="Потяните вверх, чтобы увеличить поле"></div>
         <textarea id="free-input" placeholder="Опишите критерий..." disabled></textarea>
         <div class="footer-actions">
           <span class="footer-hint" id="footer-hint">Ctrl+Enter для отправки</span>
@@ -2080,6 +2097,9 @@ function showSelfScoreForm(prevCard, crit) {
       <button class="btn btn-primary btn-score-confirm" type="button" disabled>Подтвердить оценку</button>
     </div>`;
 
+  const commentEl = card.querySelector('.self-score-comment');
+  commentEl.addEventListener('input', () => autoGrowInput(commentEl));
+
   let selected = null;
   const confirmBtn = card.querySelector('.btn-score-confirm');
   card.querySelectorAll('.self-score-opt').forEach(btn => {
@@ -2414,6 +2434,38 @@ function clearFreeInput() {
   el.style.height = '';
 }
 
+// Ручной ресайз поля ввода чата. Поле закреплено у нижнего края экрана и
+// растёт вверх, поэтому «ручка» находится над полем: тянем вверх — поле
+// увеличивается, тянем вниз — уменьшается (в пределах min/max из CSS).
+function setupInputResizer(handle, el) {
+  if (!handle || !el) return;
+  let startY = 0, startH = 0, dragging = false;
+  const clamp = (h) => {
+    const cs = getComputedStyle(el);
+    const min = parseFloat(cs.minHeight) || 0;
+    const max = parseFloat(cs.maxHeight) || Infinity;
+    return Math.max(min, Math.min(h, max));
+  };
+  handle.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    startY = e.clientY;
+    startH = el.offsetHeight;
+    handle.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  handle.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    el.style.height = clamp(startH + (startY - e.clientY)) + 'px';
+  });
+  const stop = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
+  };
+  handle.addEventListener('pointerup', stop);
+  handle.addEventListener('pointercancel', stop);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const free = document.getElementById('free-input');
   free.addEventListener('keydown', (e) => {
@@ -2424,6 +2476,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   free.addEventListener('input', () => autoGrowInput(free));
+  setupInputResizer(document.getElementById('free-resizer'), free);
 
   const epic = document.getElementById('epic-input');
   if (epic) epic.addEventListener('input', () => autoGrowInput(epic));
