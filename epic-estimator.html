@@ -866,6 +866,50 @@ body.chat-mode #app { height: 100vh; }
 }
 .crit-row.open .crit-reason { display: block; }
 
+/* Modifier block */
+.result-modifier {
+  padding: 14px 16px;
+  background: var(--accent-light);
+  border: 1px solid #f3c9b6;
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-sm);
+}
+.res-modifier-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.res-modifier-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--accent);
+  color: #fff;
+}
+.res-modifier-flow {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.res-modifier-title {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.res-modifier-reason {
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--ink2);
+  line-height: 1.6;
+}
+
 .result-footer { padding: 4px 0 28px; }
 
 /* Summary block */
@@ -1266,6 +1310,8 @@ body.chat-mode #app { height: 100vh; }
       <div class="criteria-grid" id="criteria-grid"></div>
     </div>
 
+    <div class="result-modifier" id="res-modifier" style="display:none"></div>
+
     <div class="summary-block" id="user-input-block">
       <div class="summary-header" onclick="toggleUserInput()">
         <span class="summary-toggle-label" id="user-input-label">Ваши ответы</span>
@@ -1559,27 +1605,39 @@ const EXPRESS_SYSTEM = `Ты — инструмент экспресс-оцен�
 
 Если по любому критерию оценка явно больше 8 — ставь 377.
 
-Алгоритм финальной оценки:
+Модификатор «Множественные повторения»:
+Отдельно оцени, тиражируется ли одна и та же доработка в множестве однотипных единиц (сервисы, компоненты, платформы, экраны, эндпоинты и т.п.):
+— более чем в 5 единицах → steps = 1 (+1 шаг Фибоначчи к оценке);
+— более чем в 20 единицах → steps = 2 (+2 шага Фибоначчи к оценке);
+— иначе → steps = 0.
+Учитывай только массовое повторение ОДНОЙ И ТОЙ ЖЕ работы. Разные по сути доработки в нескольких местах модификатором не считаются. Опирайся только на написанное пользователем — если тиражирование в >5 единицах не следует из описания, ставь steps = 0.
+
+Алгоритм финальной оценки (его считает система, не считай сам):
 1. Максимум из базовых критериев (1–5)
-2. Максимум из дополнительных критериев (6–7)
-3. Если max(дополнительных) > max(базовых) → увеличить max(базовых) на 1 шаг Фибоначчи
+2. Применение модификатора к максимуму базовых
+3. Максимум из дополнительных критериев (6–7)
+4. Если max(дополнительных) > оценки с модификатором → увеличить её на 1 шаг Фибоначчи
 Шкала Фибоначчи: 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377
 
 Когда готов выносить итоговую оценку — заверши сообщение ТОЛЬКО этой меткой и больше ничего после неё:
-[EXPRESS_DONE:{"scores":[{"name":"Тип изменений","type":"base","sp":N,"reason":"..."},{"name":"Компонентный состав","type":"base","sp":N,"reason":"..."},{"name":"Интеграции","type":"base","sp":N,"reason":"..."},{"name":"Бизнес-логика","type":"base","sp":N,"reason":"..."},{"name":"Тестирование","type":"base","sp":N,"reason":"..."},{"name":"Риски и последствия ошибок","type":"extra","sp":N,"reason":"..."},{"name":"Коммуникации","type":"extra","sp":N,"reason":"..."}]}]
+[EXPRESS_DONE:{"scores":[{"name":"Тип изменений","type":"base","sp":N,"reason":"..."},{"name":"Компонентный состав","type":"base","sp":N,"reason":"..."},{"name":"Интеграции","type":"base","sp":N,"reason":"..."},{"name":"Бизнес-логика","type":"base","sp":N,"reason":"..."},{"name":"Тестирование","type":"base","sp":N,"reason":"..."},{"name":"Риски и последствия ошибок","type":"extra","sp":N,"reason":"..."},{"name":"Коммуникации","type":"extra","sp":N,"reason":"..."}],"modifier":{"steps":0,"reason":""}}]
 
-Требования к полю "reason":
+Требования к полю "reason" (в критериях и в модификаторе):
 — Одно короткое предложение с фактами (что именно повлияло на оценку), без мета-фраз («описание указывает на», «соответствует критерию» и т.п.) и без рассуждений/сомнений/повторных пересчётов.
 — Строго запрещены двойные кавычки " внутри значения — если нужно процитировать или выделить слово, используй одинарные кавычки ' или вообще без кавычек.
 — Финальную оценку (итоговый SP) и алгоритм её расчёта в JSON не указывай — это считается отдельно, не пиши поле "finalSP" или "explanation".
+Требования к полю "modifier":
+— "steps" — целое 0, 1 или 2 по правилу выше.
+— "reason" — если steps > 0, одно короткое предложение с фактом (что и во скольких единицах тиражируется); если steps = 0 — пустая строка "".
 До вынесения оценки метку не добавляй.`;
 
 const FINAL_SYSTEM = `Ты должен оценить Эпик в стори поинтах. Эпик был предварительно оценен по каждому из 7-ми критериев. Руководствуясь правилами, дай финальную оценку эпику.
 
 Алгоритм оценки:
 1. Выбираем максимальную оценку из базовых критериев
-2. Выбираем максимальную оценку из дополнительных критериев
-3. Если максимальная оценка дополнительного критерия больше максимальной базовой — увеличиваем максимальную оценку базового критерия на 1 шаг в последовательности Фибоначчи. Результат принимаем за итоговую оценку эпика.
+2. Применяем модификаторы к максимуму базовых критериев (тиражирование более чем в 5 однотипных единицах → +1 шаг Фибоначчи, более чем в 20 → +2 шага)
+3. Выбираем максимальную оценку из дополнительных критериев
+4. Если максимальная оценка дополнительного критерия больше оценки с модификатором — увеличиваем её на 1 шаг в последовательности Фибоначчи. Результат принимаем за итоговую оценку эпика.
 
 Базовые критерии: "Тип изменений", "Компонентный состав", "Интеграции", "Бизнес‑логика", "Тестирование"
 Дополнительные критерии: "Риски и последствия ошибок", "Коммуникации"
@@ -1589,6 +1647,21 @@ const FINAL_SYSTEM = `Ты должен оценить Эпик в стори п
 Верни ответ строго в формате JSON без пояснений:
 {"finalSP": <число>, "explanation": "<краткое объяснение алгоритма расчёта на русском, 1-2 предложения>"}`;
 
+const MODIFIER_SYSTEM = `Ты применяешь правило-модификатор к оценке эпика в story points.
+
+Модификатор «Множественные повторения»: если одна и та же доработка тиражируется (повторяется) в множестве однотипных единиц — сервисы, компоненты, платформы, экраны, эндпоинты и т.п.:
+— более чем в 5 единицах → steps = 1 (+1 шаг Фибоначчи к оценке);
+— более чем в 20 единицах → steps = 2 (+2 шага Фибоначчи к оценке);
+— иначе → steps = 0.
+
+Правила:
+— Учитывай только массовое тиражирование ОДНОЙ И ТОЙ ЖЕ работы. Разные по сути доработки в нескольких местах модификатором НЕ считаются.
+— Опирайся ТОЛЬКО на то, что написал пользователь. Ничего не додумывай. Если тиражирование в >5 однотипных единицах из описания не следует — steps = 0.
+— Если сомневаешься, много ли единиц (по правилу «если не можете решить, много ли чего-либо — считайте, что много»), но само тиражирование одной и той же работы явно есть — выбирай ближайший ненулевой уровень.
+
+Тебе дают описание эпика и оценки по критериям. Верни ответ строго в формате JSON без пояснений и без какого-либо текста до или после:
+{"steps": 0|1|2, "reason": "<если steps > 0 — одно короткое предложение с фактом: что именно и во скольких единицах тиражируется, без двойных кавычек внутри; если steps = 0 — пустая строка>"}`;
+
 // ══════════════════════════════════════
 // STATE
 // ══════════════════════════════════════
@@ -1597,6 +1670,7 @@ const S = {
   history: [],
   scores: [],
   userInputs: [],
+  modifier: { steps: 0, reason: '' },
   loading: false,
   awaitingAdvance: false,
   clarifying: false,
@@ -1922,6 +1996,7 @@ async function startSession() {
     S.scores = [];
     S.history = [];
     S.userInputs = [];
+    S.modifier = { steps: 0, reason: '' };
     S.loading = false;
     S.awaitingAdvance = false;
     S.expressPhase = 'running';
@@ -1940,6 +2015,7 @@ async function startSession() {
   S.currentIdx = 0;
   S.scores = [];
   S.userInputs = [];
+  S.modifier = { steps: 0, reason: '' };
   S.awaitingAdvance = false;
   document.getElementById('progress-standard').style.display = '';
   document.getElementById('progress-express').style.display  = 'none';
@@ -2049,16 +2125,18 @@ function showExpressReply(text) {
 
 async function buildExpressResult(data) {
   S.scores = data.scores || [];
+  // Промежуточный шаг просчёта: модификатор приходит вместе с оценками одним ответом.
+  S.modifier = normalizeModifier(data.modifier);
   show('screen-result');
 
-  const finalSP     = calcFinalSP(S.scores);
-  const explanation = buildExplanation(S.scores, finalSP);
+  const breakdown = computeEstimate(S.scores, S.modifier);
 
-  document.getElementById('res-sp').textContent          = finalSP;
-  document.getElementById('res-explanation').textContent = explanation;
+  document.getElementById('res-sp').textContent          = breakdown.finalSP;
+  document.getElementById('res-explanation').textContent = buildExplanation(S.scores, breakdown);
   renderCriteriaGrid();
   renderUserInput();
-  renderSummary(S.scores, finalSP);
+  renderModifier(breakdown);
+  renderSummary(S.scores, breakdown);
 }
 
 async function openCriterion() {
@@ -2181,53 +2259,143 @@ async function advanceCriterion() {
 
 const FIBONACCI = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377];
 
-function calcFinalSP(scores) {
+// Двигает значение вверх на `steps` шагов по шкале Фибоначчи.
+function fibStepUp(value, steps) {
+  if (!steps || steps <= 0) return value;
+  let idx = FIBONACCI.indexOf(value);
+  if (idx === -1) idx = FIBONACCI.findLastIndex(f => f <= value);
+  if (idx === -1) idx = 0;
+  const nextIdx = Math.min(idx + steps, FIBONACCI.length - 1);
+  return FIBONACCI[nextIdx];
+}
+
+// Приводит модификатор к форме { steps: 0|1|2, reason: string }.
+function normalizeModifier(modifier) {
+  if (!modifier) return { steps: 0, reason: '' };
+  let steps = Number(modifier.steps);
+  if (!Number.isFinite(steps)) steps = 0;
+  steps = Math.max(0, Math.min(2, Math.round(steps)));
+  return { steps, reason: (modifier.reason || '').toString().trim() };
+}
+
+// Человекочитаемая подпись количества шагов модификатора («+1 шаг» / «+2 шага»).
+function modifierStepsLabel(steps) {
+  return steps === 1 ? '+1 шаг' : `+${steps} шага`;
+}
+
+// Промежуточный шаг просчёта: применяет правило-модификатор после расчёта
+// максимума базовых критериев (до сравнения с дополнительными), затем
+// сравнивает результат с дополнительными критериями.
+function computeEstimate(scores, modifier) {
+  const mod = normalizeModifier(modifier);
   const baseScores  = scores.filter(s => s.type === 'base').map(s => s.sp);
   const extraScores = scores.filter(s => s.type === 'extra').map(s => s.sp);
 
   const maxBase  = baseScores.length  ? Math.max(...baseScores)  : 0;
   const maxExtra = extraScores.length ? Math.max(...extraScores) : 0;
 
-  if (maxExtra > maxBase) {
-    const idx = FIBONACCI.indexOf(maxBase);
-    const baseIdx = idx !== -1 ? idx : FIBONACCI.findLastIndex(f => f <= maxBase);
-    const nextIdx = Math.min(baseIdx + 1, FIBONACCI.length - 1);
-    return FIBONACCI[nextIdx];
-  }
+  // Шаг модификаторов: двигает оценку вверх на основании факторов,
+  // не покрываемых самими критериями сложности.
+  const modifiedBase = fibStepUp(maxBase, mod.steps);
 
-  return maxBase || FIBONACCI[0];
+  // Сравнение с дополнительными критериями — уже против оценки с модификатором.
+  const extraBumped = maxExtra > modifiedBase;
+  const afterExtra  = extraBumped ? fibStepUp(modifiedBase, 1) : modifiedBase;
+
+  const finalSP = afterExtra || FIBONACCI[0];
+
+  return { maxBase, maxExtra, modifier: mod, modifiedBase, extraBumped, finalSP };
 }
 
-function buildExplanation(scores, finalSP) {
+function calcFinalSP(scores, modifier) {
+  return computeEstimate(scores, modifier).finalSP;
+}
+
+function buildExplanation(scores, breakdown) {
   const baseScores  = scores.filter(s => s.type === 'base');
   const extraScores = scores.filter(s => s.type === 'extra');
-  const maxBase     = Math.max(...baseScores.map(s => s.sp), 0);
-  const maxExtra    = Math.max(...extraScores.map(s => s.sp), 0);
 
-  const baseCrit  = baseScores.find(s => s.sp === maxBase);
-  const extraCrit = extraScores.find(s => s.sp === maxExtra);
+  const baseCrit  = baseScores.find(s => s.sp === breakdown.maxBase);
+  const extraCrit = extraScores.find(s => s.sp === breakdown.maxExtra);
 
-  let explanation = `Максимум базовых критериев: ${maxBase} SP (${baseCrit?.name ?? '—'}).`;
-  if (maxExtra > maxBase) {
-    explanation += ` Дополнительный критерий «${extraCrit?.name ?? '—'}» (${maxExtra} SP) превышает базовый — оценка повышена на 1 шаг Фибоначчи до ${finalSP} SP.`;
+  let explanation = `Максимум базовых критериев: ${breakdown.maxBase} SP (${baseCrit?.name ?? '—'}).`;
+
+  if (breakdown.modifier.steps > 0) {
+    const reasonPart = breakdown.modifier.reason ? ` (${breakdown.modifier.reason})` : '';
+    explanation += ` Применён модификатор${reasonPart}: оценка повышена на ${breakdown.modifier.steps} ${breakdown.modifier.steps === 1 ? 'шаг' : 'шага'} Фибоначчи до ${breakdown.modifiedBase} SP.`;
+  }
+
+  if (breakdown.extraBumped) {
+    explanation += ` Дополнительный критерий «${extraCrit?.name ?? '—'}» (${breakdown.maxExtra} SP) превышает — оценка повышена на 1 шаг Фибоначчи до ${breakdown.finalSP} SP.`;
   } else {
-    explanation += ` Дополнительные критерии не превышают базовые — итоговая оценка равна максимуму базовых.`;
+    explanation += ` Дополнительные критерии не превышают — итоговая оценка ${breakdown.finalSP} SP.`;
   }
   return explanation;
 }
 
+// Собирает всё, что описал пользователь, и оценки по критериям —
+// вход для промежуточного шага применения модификатора в стандартном режиме.
+function buildEpicDigest() {
+  const lines = [];
+  if (S.userInputs.length) {
+    lines.push('Что написал пользователь:');
+    S.userInputs.forEach(g => {
+      const label = g.criterion || 'Описание эпика';
+      lines.push(`— ${label}: ${g.texts.join(' / ')}`);
+    });
+  }
+  if (S.scores.length) {
+    lines.push('', 'Оценки по критериям:');
+    S.scores.forEach(s => {
+      const reasonPart = s.reason ? ` — ${s.reason.trim()}` : '';
+      lines.push(`— ${s.name}: ${s.sp} SP${reasonPart}`);
+    });
+  }
+  return lines.join('\n');
+}
+
+// Извлекает JSON модификатора из ответа модели.
+function parseModifier(text) {
+  if (!text) return null;
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end === -1 || end < start) return null;
+  try { return JSON.parse(text.slice(start, end + 1)); } catch(_) { return null; }
+}
+
+// Промежуточный шаг стандартного режима: отдельным запросом определяет модификатор.
+async function assessModifier() {
+  const digest = buildEpicDigest();
+  if (!digest.trim()) return { steps: 0, reason: '' };
+  const reply = await callClaude([{ role: 'user', content: digest }], MODIFIER_SYSTEM);
+  return normalizeModifier(parseModifier(reply));
+}
+
 async function buildFinalResult() {
+  // Промежуточный шаг просчёта: применяем правило-модификатор.
+  // Определяется отдельным запросом на основании всего, что описал пользователь.
+  setLoading(true);
+  try {
+    S.modifier = await assessModifier();
+  } catch(e) {
+    // Если шаг модификатора не удался — продолжаем без него, оценка остаётся валидной.
+    debugLog('error', 'modifier: ' + e.message);
+    S.modifier = { steps: 0, reason: '' };
+  } finally {
+    setLoading(false);
+  }
+
   show('screen-result');
 
-  const finalSP   = calcFinalSP(S.scores);
-  const explanation = buildExplanation(S.scores, finalSP);
+  const breakdown = computeEstimate(S.scores, S.modifier);
 
-  document.getElementById('res-sp').textContent          = finalSP;
-  document.getElementById('res-explanation').textContent = explanation;
+  document.getElementById('res-sp').textContent          = breakdown.finalSP;
+  document.getElementById('res-explanation').textContent = buildExplanation(S.scores, breakdown);
 
   renderCriteriaGrid();
   renderUserInput();
-  renderSummary(S.scores, finalSP);
+  renderModifier(breakdown);
+  renderSummary(S.scores, breakdown);
 }
 
 function renderCriteriaGrid() {
@@ -2258,22 +2426,48 @@ function renderCriteriaGrid() {
   });
 }
 
+// Показывает блок модификатора на экране результата, если он был применён.
+function renderModifier(breakdown) {
+  const box = document.getElementById('res-modifier');
+  if (!box) return;
+  const mod = breakdown.modifier;
+  if (!mod || mod.steps <= 0) {
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+  const reasonPart = mod.reason ? `<div class="res-modifier-reason">${escHtml(mod.reason)}</div>` : '';
+  box.innerHTML = `
+    <div class="res-modifier-head">
+      <span class="res-modifier-badge">Модификатор ${escHtml(modifierStepsLabel(mod.steps))}</span>
+      <span class="res-modifier-flow">${breakdown.maxBase} → ${breakdown.modifiedBase} SP</span>
+    </div>
+    <div class="res-modifier-title">Множественные повторения</div>
+    ${reasonPart}`;
+  box.style.display = '';
+}
+
 const COPY_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 const CHECK_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
 
-function buildSummaryText(scores, finalSP) {
+function buildSummaryText(scores, breakdown) {
   const lines = [];
-  lines.push(`Итоговая оценка эпика: ${finalSP} SP\n`);
+  lines.push(`Итоговая оценка эпика: ${breakdown.finalSP} SP\n`);
   lines.push('Оценки по критериям:');
   scores.forEach(s => {
     const reasonPart = s.reason ? ` — ${s.reason.trim()}` : '';
     lines.push(`• ${s.name}: ${s.sp} SP${reasonPart}`);
   });
+  if (breakdown.modifier.steps > 0) {
+    const reasonPart = breakdown.modifier.reason ? ` — ${breakdown.modifier.reason}` : '';
+    lines.push('');
+    lines.push(`Модификатор: ${modifierStepsLabel(breakdown.modifier.steps)} Фибоначчи (${breakdown.maxBase} → ${breakdown.modifiedBase} SP)${reasonPart}`);
+  }
   return lines.join('\n');
 }
 
-function renderSummary(scores, finalSP) {
-  const text = buildSummaryText(scores, finalSP);
+function renderSummary(scores, breakdown) {
+  const text = buildSummaryText(scores, breakdown);
   document.getElementById('summary-body').textContent = text;
   document.getElementById('summary-block').classList.remove('open');
   const btn = document.getElementById('summary-copy-btn');
@@ -2377,9 +2571,12 @@ function resetAll() {
   S.currentIdx = 0;
   S.history = []; S.scores = []; S.userInputs = []; S.loading = false; S.awaitingAdvance = false;
   S.clarifying = false; S.currentBadge = null;
+  S.modifier = { steps: 0, reason: '' };
   S.expressPhase = null;
   document.getElementById('chat-area').innerHTML = '';
   document.getElementById('criteria-grid').innerHTML = '';
+  const modBox = document.getElementById('res-modifier');
+  if (modBox) { modBox.style.display = 'none'; modBox.innerHTML = ''; }
   document.getElementById('epic-input').value = '';
   document.getElementById('progress-standard').style.display = '';
   document.getElementById('progress-express').style.display  = 'none';
